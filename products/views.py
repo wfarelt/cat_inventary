@@ -3,11 +3,13 @@ import zipfile
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, get_object_or_404, redirect
 from django.conf import settings
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import permission_required, login_required
+from core.permissions import is_admin
 from django.http import JsonResponse
 from .models import Product, Category, ProductKit, ProductKitItem
 from .forms import ProductForm, CategoryForm, ProductKitForm, ProductKitItemForm
 from .services import search_products
+from . import api as api_views
 from django.db import transaction
 from django.contrib import messages
 from django.core.files.base import ContentFile
@@ -15,33 +17,42 @@ from openpyxl import load_workbook
 import re
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.urls import reverse
+from django.db.models import Q
 
 
 
-def is_admin(user):
-    if not (user and user.is_active):
-        return False
-    # allow superusers
-    if user.is_superuser:
-        return True
-    # allow staff
-    if getattr(user, 'is_staff', False):
-        return True
-    # check groups configured in settings.PRODUCTS_ALLOWED_GROUPS
-    allowed = getattr(settings, 'PRODUCTS_ALLOWED_GROUPS', ['Admin', 'Manager'])
-    try:
-        user_groups = set(user.groups.values_list('name', flat=True))
-    except Exception:
-        user_groups = set()
-    return bool(user_groups.intersection(set(allowed)))
 
 
 def product_list(request):
+    q = request.GET.get('q', '').strip()
+    category = request.GET.get('category', '').strip()
+    has_image = request.GET.get('has_image')
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 25))
+
     qs = Product.objects.select_related('category').all().order_by('code')
-    return render(request, 'products/list.html', {'products': qs})
+    if q:
+        qs = qs.filter(Q(code__icontains=q) | Q(description__icontains=q))
+    if category:
+        try:
+            cid = int(category)
+            qs = qs.filter(category__id=cid)
+        except Exception:
+            qs = qs.filter(category__name__icontains=category)
+    if has_image is not None and has_image != '':
+        if has_image in ('1', 'true', 'yes'):
+            qs = qs.filter(image__isnull=False).exclude(image='')
+        else:
+            qs = qs.filter(Q(image__isnull=True) | Q(image=''))
+
+    paginator = Paginator(qs, per_page)
+    pag = paginator.get_page(page)
+    categories = Category.objects.all().order_by('name')
+    return render(request, 'products/list.html', {'products': pag, 'paginator': paginator, 'q': q, 'categories': categories, 'selected_category': category, 'has_image': has_image})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_product', raise_exception=True)
 def product_create(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
@@ -53,12 +64,18 @@ def product_create(request):
     return render(request, 'products/form.html', {'form': form})
 
 
+@permission_required('products.view_product', raise_exception=True)
 def product_detail(request, pk):
     p = get_object_or_404(Product.objects.select_related('category'), pk=pk)
     return render(request, 'products/detail.html', {'product': p})
 
+# expose api functions for urls import compatibility
+api_product_list = api_views.api_product_list
+api_product_detail = api_views.api_product_detail
+api_product_import_preview = api_views.api_product_import_preview
 
-@user_passes_test(is_admin)
+
+@permission_required('products.change_product', raise_exception=True)
 def product_edit(request, pk):
     p = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -71,6 +88,7 @@ def product_edit(request, pk):
     return render(request, 'products/form.html', {'form': form, 'product': p})
 
 
+@login_required
 def product_autocomplete(request):
     q = request.GET.get('q', '')
     results = []
@@ -81,7 +99,7 @@ def product_autocomplete(request):
     return JsonResponse({'results': results})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_product', raise_exception=True)
 def product_import(request):
     # Upload POST creates preview and stores rows in session.
     if request.method == 'POST' and request.FILES.get('file'):
@@ -209,7 +227,7 @@ def product_import(request):
     return render(request, 'products/import.html')
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_product', raise_exception=True)
 def product_import_confirm(request):
     action = request.POST.get('action', 'add_new')
     rows = request.session.get('import_rows', [])
@@ -311,7 +329,7 @@ def product_import_confirm(request):
     return render(request, 'products/import_summary.html', {'summary': summary})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.change_product', raise_exception=True)
 def upload_images_zip(request):
     summary = {'saved': [], 'not_found': []}
     if request.method == 'POST' and request.FILES.get('zip'):
@@ -332,7 +350,7 @@ def upload_images_zip(request):
     return render(request, 'products/images_summary.html', {'summary': summary})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_product', raise_exception=True)
 def product_import_selection(request):
     # AJAX endpoint to persist selected row numbers across preview pages
     if request.method == 'POST':
@@ -357,13 +375,182 @@ def product_import_selection(request):
     return JsonResponse({'ok': False}, status=400)
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_product', raise_exception=True)
+def product_import_edit_cell(request):
+    # AJAX endpoint to edit a single cell in the import preview and revalidate that row
+    if request.method == 'POST':
+        row_raw = request.POST.get('row')
+        header = request.POST.get('header')
+        value = request.POST.get('value', '')
+        try:
+            rownum = int(row_raw)
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'invalid_row'}, status=400)
+
+        rows = request.session.get('import_rows', [])
+        updated_row = None
+        for i, r in enumerate(rows):
+            try:
+                if int(r.get('_row_number')) != rownum:
+                    continue
+            except Exception:
+                continue
+            # work on a mutable copy
+            rr = dict(r)
+            errors = rr.get('errors', {}) or {}
+            # clear previous errors for this header
+            if header in errors:
+                errors.pop(header, None)
+
+            # specific validations
+            if header == 'code':
+                code = (value or '').strip()
+                if not code:
+                    errors.setdefault('code', []).append('Código vacío')
+                else:
+                    code = str(code).upper()
+                    if not re.match(r'^[A-Za-z0-9\-_. ]+$', code):
+                        errors.setdefault('code', []).append('Código con caracteres inválidos')
+                    # check duplicates within file (excluding this row)
+                    codes = [x.get('code', '') for x in rows if x.get('_row_number') != rownum]
+                    if code in codes:
+                        errors.setdefault('code', []).append('Código duplicado en archivo')
+                    rr['code'] = code
+            elif header == 'category':
+                cat_name = (value or '').strip()
+                if not cat_name:
+                    errors.setdefault('category', []).append('Categoría vacía')
+                else:
+                    if len(cat_name) > 150:
+                        errors.setdefault('category', []).append('Categoría demasiado larga')
+                    rr['category'] = cat_name
+            elif header == 'description':
+                desc = (value or '').strip()
+                if not desc:
+                    errors.setdefault('description', []).append('Descripción vacía')
+                else:
+                    if len(desc) > 255:
+                        errors.setdefault('description', []).append('Descripción muy larga')
+                    rr['description'] = desc
+            elif header in ('cost', 'price', 'stock', 'stock_min'):
+                if value in (None, ''):
+                    rr[header] = None
+                else:
+                    try:
+                        d = Decimal(str(value))
+                        if d < 0:
+                            errors.setdefault(header, []).append('Valor negativo')
+                        if abs(d) > Decimal('1000000000'):
+                            errors.setdefault(header, []).append('Valor fuera de rango')
+                        # store as string for session serializability
+                        rr[header] = str(d)
+                    except Exception:
+                        errors.setdefault(header, []).append(f'{header} inválido')
+            elif header == 'ruc':
+                ruc = (value or '').strip()
+                if ruc:
+                    if not re.match(r'^\d{11}$', ruc):
+                        errors.setdefault('ruc', []).append('RUC inválido (debe ser 11 dígitos)')
+                    rr['ruc'] = ruc
+            else:
+                rr[header] = value or ''
+
+            rr['errors'] = errors
+            rows[i] = rr
+            updated_row = rr
+            break
+
+        request.session['import_rows'] = rows
+        if not updated_row:
+            return JsonResponse({'ok': False, 'error': 'row_not_found'}, status=404)
+
+        return JsonResponse({'ok': True, 'row': updated_row, 'selected_count': len(request.session.get('import_selected', []))})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@permission_required('products.add_product', raise_exception=True)
+def product_import_clear_selection(request):
+    if request.method == 'POST':
+        try:
+            request.session['import_selected'] = []
+        except Exception:
+            request.session.pop('import_selected', None)
+        return JsonResponse({'ok': True, 'selected_count': 0})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@permission_required('products.add_product', raise_exception=True)
+def product_import_map(request):
+    # mapping UI: map uploaded headers to product fields
+    headers = request.session.get('import_headers')
+    if not headers:
+        return redirect('product_import')
+
+    fields = ['code', 'description', 'category', 'cost', 'price', 'stock', 'stock_min', 'location', 'cross_reference', 'ruc']
+
+    if request.method == 'POST':
+        mapping = {}
+        for h in headers:
+            val = request.POST.get(f'map_{h}', '')
+            if val:
+                mapping[h] = val
+        request.session['import_mapping'] = mapping
+        # save template if provided
+        tmpl_name = request.POST.get('template_name', '').strip()
+        if tmpl_name:
+            templates = request.session.get('import_templates', {})
+            templates[tmpl_name] = mapping
+            request.session['import_templates'] = templates
+        # go back to preview
+        return redirect('product_import')
+
+    templates = request.session.get('import_templates', {})
+    return render(request, 'products/import_map.html', {'headers': headers, 'fields': fields, 'templates': templates})
+
+
+@permission_required('products.view_product', raise_exception=True)
+def image_manager(request):
+    q = request.GET.get('q', '').strip()
+    has_image = request.GET.get('has_image')
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 25))
+
+    qs = Product.objects.select_related('category').all().order_by('code')
+    if q:
+        qs = qs.filter(Q(code__icontains=q) | Q(description__icontains=q))
+    if has_image is not None and has_image != '':
+        if has_image in ('1', 'true', 'yes'):
+            qs = qs.filter(image__isnull=False).exclude(image='')
+        else:
+            qs = qs.filter(Q(image__isnull=True) | Q(image=''))
+
+    paginator = Paginator(qs, per_page)
+    pag = paginator.get_page(page)
+    return render(request, 'products/image_manager.html', {'products': pag, 'paginator': paginator, 'q': q, 'has_image': has_image})
+
+
+@permission_required('products.change_product', raise_exception=True)
+def image_unassign(request, pk):
+    p = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        try:
+            if p.image:
+                p.image.delete(save=False)
+        except Exception:
+            pass
+        p.image = None
+        p.save()
+        messages.success(request, f'Imagen desasignada de {p.code}')
+    return redirect('image_manager')
+
+
+@permission_required('products.view_productkit', raise_exception=True)
 def kit_list(request):
     qs = ProductKit.objects.all().order_by('name')
     return render(request, 'products/kit_list.html', {'kits': qs})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_productkit', raise_exception=True)
 def kit_create(request):
     if request.method == 'POST':
         form = ProductKitForm(request.POST)
@@ -375,7 +562,7 @@ def kit_create(request):
     return render(request, 'products/kit_form.html', {'form': form})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.change_productkit', raise_exception=True)
 def kit_edit(request, pk):
     kit = get_object_or_404(ProductKit, pk=pk)
     if request.method == 'POST':
@@ -388,6 +575,7 @@ def kit_edit(request, pk):
     return render(request, 'products/kit_form.html', {'form': form, 'kit': kit})
 
 
+@permission_required('products.view_productkit', raise_exception=True)
 def kit_detail(request, pk):
     kit = get_object_or_404(ProductKit, pk=pk)
     items = kit.items.select_related('product').all()
@@ -395,7 +583,7 @@ def kit_detail(request, pk):
     return render(request, 'products/kit_detail.html', {'kit': kit, 'items': items, 'item_form': item_form})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.change_productkit', raise_exception=True)
 def kit_add_item(request, pk):
     kit = get_object_or_404(ProductKit, pk=pk)
     if request.method == 'POST':
@@ -411,7 +599,7 @@ def kit_add_item(request, pk):
     return redirect('kit_detail', pk=kit.pk)
 
 
-@user_passes_test(is_admin)
+@permission_required('products.change_productkit', raise_exception=True)
 def kit_remove_item(request, pk, item_pk):
     kit = get_object_or_404(ProductKit, pk=pk)
     item = get_object_or_404(ProductKitItem, pk=item_pk, kit=kit)
@@ -420,7 +608,7 @@ def kit_remove_item(request, pk, item_pk):
     return redirect('kit_detail', pk=kit.pk)
 
 
-@user_passes_test(is_admin)
+@permission_required('products.view_category', raise_exception=True)
 def category_list(request):
     q = request.GET.get('q', '')
     page = int(request.GET.get('page', 1))
@@ -432,7 +620,7 @@ def category_list(request):
     return render(request, 'products/category_list.html', {'categories': pag, 'paginator': paginator, 'q': q})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.add_category', raise_exception=True)
 def category_create(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
@@ -448,7 +636,7 @@ def category_create(request):
     return render(request, 'products/category_form.html', {'form': form})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.change_category', raise_exception=True)
 def category_edit(request, pk):
     cat = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -462,7 +650,7 @@ def category_edit(request, pk):
     return render(request, 'products/category_form.html', {'form': form, 'category': cat})
 
 
-@user_passes_test(is_admin)
+@permission_required('products.delete_category', raise_exception=True)
 def category_delete(request, pk):
     cat = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -482,3 +670,162 @@ def category_delete(request, pk):
 
     categories = Category.objects.exclude(pk=cat.pk).order_by('name')
     return render(request, 'products/category_confirm_delete.html', {'category': cat, 'categories': categories})
+
+
+@permission_required('products.change_product', raise_exception=True)
+def product_bulk_action(request):
+    # handle POST bulk actions: set category, set active
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        ids = request.POST.getlist('selected_products')
+        if not ids:
+            ids = request.session.get('bulk_selected', [])
+        try:
+            ids = [int(x) for x in ids]
+        except Exception:
+            ids = []
+        if not ids:
+            messages.warning(request, 'No hay productos seleccionados')
+            return redirect('product_list')
+        qs = Product.objects.filter(pk__in=ids)
+        # basic actions
+        if action == 'set_category':
+            cat_id = request.POST.get('category_id')
+            try:
+                cat = Category.objects.get(pk=int(cat_id))
+                qs.update(category=cat)
+                messages.success(request, f'Categoría actualizada para {len(ids)} productos')
+            except Exception:
+                messages.error(request, 'Categoría no válida')
+        elif action == 'set_active':
+            val = request.POST.get('active_value')
+            if val in ('1', '0'):
+                is_active = (val == '1')
+                qs.update(is_active=is_active)
+                messages.success(request, f'Estado actualizado para {len(ids)} productos')
+            else:
+                messages.error(request, 'Valor de activo inválido')
+        # price actions
+        elif action == 'set_price':
+            v = request.POST.get('price_value')
+            try:
+                price = Decimal(str(v))
+                if price < 0:
+                    messages.error(request, 'El precio no puede ser negativo')
+                    return redirect('product_list')
+                with transaction.atomic():
+                    qs.update(price=price)
+                messages.success(request, f'Precio establecido para {len(ids)} productos')
+            except Exception:
+                messages.error(request, 'Valor de precio inválido')
+        elif action == 'delta_price':
+            v = request.POST.get('price_delta')
+            try:
+                delta = Decimal(str(v))
+            except Exception:
+                messages.error(request, 'Delta de precio inválido')
+                return redirect('product_list')
+            prods = list(qs)
+            # validate resulting prices
+            for p in prods:
+                cur = p.price or Decimal('0')
+                new = cur + delta
+                if new < 0:
+                    messages.error(request, 'El ajuste produciría un precio negativo (rechazado)')
+                    return redirect('product_list')
+                p.price = new
+            with transaction.atomic():
+                Product.objects.bulk_update(prods, ['price'])
+            messages.success(request, f'Precio ajustado para {len(ids)} productos')
+        # stock actions
+        elif action == 'set_stock':
+            v = request.POST.get('stock_value')
+            try:
+                stock_val = Decimal(str(v))
+                if stock_val < 0:
+                    messages.error(request, 'El stock no puede ser negativo')
+                    return redirect('product_list')
+                prods = list(qs)
+                for p in prods:
+                    p.stock = stock_val
+                with transaction.atomic():
+                    Product.objects.bulk_update(prods, ['stock'])
+                messages.success(request, f'Stock establecido para {len(ids)} productos')
+            except Exception:
+                messages.error(request, 'Valor de stock inválido')
+        elif action == 'delta_stock':
+            v = request.POST.get('stock_delta')
+            try:
+                delta = Decimal(str(v))
+            except Exception:
+                messages.error(request, 'Delta de stock inválido')
+                return redirect('product_list')
+            prods = list(qs)
+            for p in prods:
+                cur = p.stock or Decimal('0')
+                new = cur + delta
+                if new < 0:
+                    messages.error(request, 'El ajuste produciría stock negativo (rechazado)')
+                    return redirect('product_list')
+                p.stock = new
+            with transaction.atomic():
+                Product.objects.bulk_update(prods, ['stock'])
+            messages.success(request, f'Stock ajustado para {len(ids)} productos')
+        # cost and location
+        elif action == 'set_cost':
+            v = request.POST.get('cost_value')
+            try:
+                cost_val = Decimal(str(v))
+                if cost_val < 0:
+                    messages.error(request, 'El costo no puede ser negativo')
+                    return redirect('product_list')
+                with transaction.atomic():
+                    qs.update(cost=cost_val)
+                messages.success(request, f'Costo establecido para {len(ids)} productos')
+            except Exception:
+                messages.error(request, 'Valor de costo inválido')
+        elif action == 'set_location':
+            loc = request.POST.get('location_value', '')
+            with transaction.atomic():
+                qs.update(location=loc)
+            messages.success(request, f'Ubicación actualizada para {len(ids)} productos')
+        else:
+            messages.error(request, 'Acción desconocida')
+    return redirect('product_list')
+
+
+@permission_required('products.change_product', raise_exception=True)
+def product_bulk_selection(request):
+    # GET returns current persisted selection; POST updates selection for visible page
+    if request.method == 'GET':
+        sel = list(request.session.get('bulk_selected', []))
+        return JsonResponse({'ok': True, 'selected': sel, 'selected_count': len(sel)})
+
+    if request.method == 'POST':
+        visible = request.POST.getlist('visible[]') or request.POST.getlist('visible')
+        selected = request.POST.getlist('selected[]') or request.POST.getlist('selected')
+        try:
+            visible = [int(x) for x in visible]
+        except Exception:
+            visible = []
+        try:
+            selected = [int(x) for x in selected]
+        except Exception:
+            selected = []
+        sess = set(request.session.get('bulk_selected', []))
+        for v in visible:
+            sess.discard(v)
+        for s in selected:
+            sess.add(s)
+        request.session['bulk_selected'] = list(sess)
+        return JsonResponse({'ok': True, 'selected_count': len(sess)})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@permission_required('products.change_product', raise_exception=True)
+def product_bulk_clear_selection(request):
+    if request.method == 'POST':
+        request.session['bulk_selected'] = []
+        return JsonResponse({'ok': True, 'selected_count': 0})
+    return JsonResponse({'ok': False}, status=400)
+

@@ -7,13 +7,17 @@
     <a href="{% url 'kit_create' %}" class="bg-blue-600 text-white px-3 py-1 rounded">Nuevo Kit</a>
   </div>
   <table class="min-w-full mt-4 bg-white border-collapse border">
-    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Activo</th><th></th></tr></thead>
+    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Items</th><th>Activo</th><th></th></tr></thead>
     <tbody>
       {% for k in kits %}
         <tr class="border-t">
-          <td class="px-2 py-1">{{ k.name }}</td>
-          <td class="px-2 py-1">{% if k.is_active %}Sí{% else %}No{% endif %}</td>
-          <td class="px-2 py-1"><a href="{% url 'kit_detail' k.pk %}" class="text-blue-600">Ver</a> | <a href="{% url 'kit_edit' k.pk %}" class="text-blue-600">Editar</a></td>
+          <td class="px-2 py-1 font-medium">{{ k.name }}</td>
+          <td class="px-2 py-1">{{ k.items.count }}</td>
+          <td class="px-2 py-1">{% if k.is_active %}<span class="text-green-600">Sí</span>{% else %}<span class="text-gray-500">No</span>{% endif %}</td>
+          <td class="px-2 py-1">
+            <a href="{% url 'kit_detail' k.pk %}" class="bg-gray-100 px-2 py-1 rounded text-sm">Ver</a>
+            <a href="{% url 'kit_edit' k.pk %}" class="ml-2 bg-yellow-100 px-2 py-1 rounded text-sm">Editar</a>
+          </td>
         </tr>
       {% empty %}
         <tr><td colspan="3">No hay kits.</td></tr>

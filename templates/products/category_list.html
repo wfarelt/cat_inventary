@@ -12,17 +12,19 @@
     </div>
   </div>
   <table class="min-w-full mt-4 bg-white border-collapse border">
-    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Descripción</th><th>Activo</th><th></th></tr></thead>
+    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Productos</th><th>Descripción</th><th>Activo</th><th></th></tr></thead>
     <tbody>
       {% for c in categories %}
         <tr class="border-t">
-          <td class="px-2 py-1">{{ c.name }}</td>
+          <td class="px-2 py-1 font-medium">{{ c.name }}</td>
+          <td class="px-2 py-1">{{ c.products.count }}</td>
           <td class="px-2 py-1">{{ c.description|default:'' }}</td>
-          <td class="px-2 py-1">{% if c.is_active %}Sí{% else %}No{% endif %}</td>
-          <td class="px-2 py-1"><a href="{% url 'category_edit' c.pk %}" class="text-blue-600">Editar</a> |
-            <form method="post" action="{% url 'category_delete' c.pk %}" style="display:inline">
+          <td class="px-2 py-1">{% if c.is_active %}<span class="text-green-600">Sí</span>{% else %}<span class="text-gray-500">No</span>{% endif %}</td>
+          <td class="px-2 py-1">
+            <a href="{% url 'category_edit' c.pk %}" class="bg-yellow-100 px-2 py-1 rounded text-sm">Editar</a>
+            <form method="post" action="{% url 'category_delete' c.pk %}" style="display:inline" onsubmit="return confirm('Eliminar categoría? Se pueden reasignar productos.');">
               {% csrf_token %}
-              <button class="text-red-600">Eliminar</button>
+              <button class="text-red-600 ml-2">Eliminar</button>
             </form>
           </td>
         </tr>

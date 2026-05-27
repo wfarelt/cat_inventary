@@ -20,14 +20,14 @@
           <td class="px-2 py-1">{{ it.product.code }} - {{ it.product.description }}</td>
           <td class="px-2 py-1">{{ it.quantity }}</td>
           <td class="px-2 py-1">
-            <form method="post" action="{% url 'kit_remove_item' kit.pk it.pk %}" style="display:inline">
+            <form method="post" action="{% url 'kit_remove_item' kit.pk it.pk %}" style="display:inline" onsubmit="return confirm('Eliminar item del kit?');">
               {% csrf_token %}
               <button class="text-red-600">Eliminar</button>
             </form>
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="3">No hay items.</td></tr>
+        <tr><td colspan="3" class="text-gray-600">No hay items en este kit.</td></tr>
       {% endfor %}
     </tbody>
   </table>

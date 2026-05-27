@@ -7,14 +7,77 @@
     <div>
       <a href="{% url 'product_import' %}" class="mr-2">Importar Excel</a>
       <a href="{% url 'upload_images_zip' %}" class="mr-2">Subir imágenes ZIP</a>
-      {% if request.user.is_superuser %}
+      {% if request.user.has_perm('products.add_product') %}
         <a href="{% url 'product_create' %}" class="bg-yellow-500 text-black px-3 py-1 rounded">Nuevo</a>
       {% endif %}
     </div>
   </div>
-  <table id="products-table" class="min-w-full mt-4">
+  <form method="get" class="mt-3 flex gap-2 items-end">
+    <div>
+      <label class="text-sm">Buscar</label>
+      <input name="q" value="{{ q }}" class="border px-2 py-1" placeholder="Código o descripción">
+    </div>
+    <div>
+      <label class="text-sm">Categoría</label>
+      <select name="category" class="border px-2 py-1">
+        <option value="">-- Todas --</option>
+        {% for c in categories %}
+          <option value="{{ c.pk }}" {% if selected_category|default:'' == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-sm">Tiene imagen</label>
+      <select name="has_image" class="border px-2 py-1">
+        <option value="">-- Cualquiera --</option>
+        <option value="1" {% if has_image == '1' %}selected{% endif %}>Sí</option>
+        <option value="0" {% if has_image == '0' %}selected{% endif %}>No</option>
+      </select>
+    </div>
+    <div>
+      <button class="bg-blue-600 text-white px-3 py-1 rounded">Filtrar</button>
+    </div>
+  </form>
+  <form method="post" action="{% url 'product_bulk_action' %}" id="bulk-form">
+    {% csrf_token %}
+    <div class="flex items-center gap-2 mt-4">
+      <label><input type="checkbox" id="bulk-select-all"> Seleccionar todo en página</label>
+      <span class="ml-4 text-sm">Seleccionados: <strong id="selected-total">0</strong></span>
+      <label>Acción:</label>
+      <select id="bulk-action" name="action" class="border px-2 py-1">
+        <option value="">-- Seleccionar acción --</option>
+        <option value="set_category">Cambiar categoría</option>
+        <option value="set_active">Cambiar estado</option>
+        <option value="set_price">Establecer precio</option>
+        <option value="delta_price">Ajustar precio (+/-)</option>
+        <option value="set_stock">Establecer stock</option>
+        <option value="delta_stock">Ajustar stock (+/-)</option>
+        <option value="set_cost">Establecer costo</option>
+        <option value="set_location">Establecer ubicación</option>
+      </select>
+      <select id="bulk-category" name="category_id" class="border px-2 py-1 hidden">
+        <option value="">-- Seleccionar categoría --</option>
+        {% for c in categories %}
+          <option value="{{ c.pk }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <select id="bulk-active" name="active_value" class="border px-2 py-1 hidden">
+        <option value="1">Activar</option>
+        <option value="0">Desactivar</option>
+      </select>
+      <input id="bulk-price" name="price_value" type="text" placeholder="Precio (ej. 123.45)" class="border px-2 py-1 hidden">
+      <input id="bulk-price-delta" name="price_delta" type="text" placeholder="Delta precio (ej. -10.00)" class="border px-2 py-1 hidden">
+      <input id="bulk-stock" name="stock_value" type="text" placeholder="Stock (ej. 10)" class="border px-2 py-1 hidden">
+      <input id="bulk-stock-delta" name="stock_delta" type="text" placeholder="Delta stock (ej. -2)" class="border px-2 py-1 hidden">
+      <input id="bulk-cost" name="cost_value" type="text" placeholder="Costo (ej. 50.00)" class="border px-2 py-1 hidden">
+      <input id="bulk-location" name="location_value" type="text" placeholder="Ubicación" class="border px-2 py-1 hidden">
+      <button class="bg-green-600 text-white px-3 py-1 rounded">Aplicar</button>
+      <button id="clear-bulk-selection" type="button" class="ml-2 text-sm text-red-600">Limpiar selección</button>
+    </div>
+    <table id="products-table" class="min-w-full mt-4">
     <thead>
       <tr>
+        <th></th>
         <th>Imagen</th>
         <th>Código</th>
         <th>Descripción</th>
@@ -31,6 +94,7 @@
     <tbody>
       {% for p in products %}
       <tr>
+        <td><input type="checkbox" name="selected_products" value="{{ p.pk }}"></td>
         <td>{% if p.image %}<img src="{{ p.image.url }}" alt="{{ p.code }}" width="40">{% endif %}</td>
         <td>{{ p.code }}</td>
         <td>{{ p.description }}</td>
@@ -43,12 +107,161 @@
         <td>{{ p.is_active }}</td>
         <td>
           <a href="{% url 'product_detail' p.pk %}">Ver</a>
-          {% if request.user.is_superuser %} | <a href="{% url 'product_edit' p.pk %}">Editar</a>{% endif %}
+          {% if request.user.has_perm('products.change_product') %} | <a href="{% url 'product_edit' p.pk %}">Editar</a>{% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+    </table>
+  </form>
+  {% if paginator.num_pages > 1 %}
+  <div class="mt-4">
+    <span>Página {{ products.number }} de {{ paginator.num_pages }}</span>
+    <div class="mt-2">
+      {% if products.has_previous %}
+        <a href="?page={{ products.previous_page_number }}&q={{ q }}&category={{ selected_category }}&has_image={{ has_image }}" class="mr-2">Anterior</a>
+      {% endif %}
+      {% if products.has_next %}
+        <a href="?page={{ products.next_page_number }}&q={{ q }}&category={{ selected_category }}&has_image={{ has_image }}">Siguiente</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<script>
+  document.getElementById('bulk-select-all').addEventListener('change', function(e){
+    const checked = e.target.checked;
+    document.querySelectorAll('input[name="selected_products"]').forEach(function(cb){ cb.checked = checked; });
+  });
+  // update selected counter from server
+  function updateSelectedCounter(count){
+    const el = document.getElementById('selected-total');
+    if(el) el.textContent = String(count);
+  }
+  // selection persistence helpers
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function collectVisibleAndSelected(){
+    const visibles = [];
+    const selected = [];
+    document.querySelectorAll('input[name="selected_products"]').forEach(function(cb){
+      const val = parseInt(cb.value);
+      visibles.push(val);
+      if(cb.checked) selected.push(val);
+    });
+    return {visible: visibles, selected: selected};
+  }
+
+  function updateBulkSelectionAndNavigate(url){
+    const data = collectVisibleAndSelected();
+    const form = new URLSearchParams();
+    data.visible.forEach(v => form.append('visible[]', v));
+    data.selected.forEach(s => form.append('selected[]', s));
+    fetch('{% url "product_bulk_selection" %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json'},
+      body: form
+    }).then(function(resp){
+      return resp.json().catch(()=>({ok:false}));
+    }).then(function(data){
+      if(data && data.selected_count!==undefined) updateSelectedCounter(data.selected_count);
+      if(url) window.location.href = url;
+    }).catch(function(){ if(url) window.location.href = url; });
+  }
+
+  // on checkbox change, update server
+  document.querySelectorAll('input[name="selected_products"]').forEach(function(cb){ cb.addEventListener('change', function(){ updateBulkSelectionAndNavigate(); }); });
+  document.getElementById('bulk-select-all').addEventListener('change', function(){ updateBulkSelectionAndNavigate(); });
+
+  // initialize counter from persisted selection on load
+  fetch('{% url "product_bulk_selection" %}', {method: 'GET', headers: {'Accept':'application/json'}}).then(r=>r.json()).then(function(d){ if(d && d.selected_count!==undefined) updateSelectedCounter(d.selected_count); }).catch(()=>{});
+
+  // intercept page links to persist selection before navigation
+  document.querySelectorAll('a').forEach(function(a){
+    if(a.classList && a.classList.contains('no-intercept')) return;
+    const href = a.getAttribute('href') || '';
+    if(href.indexOf('?page=')!==-1){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        const h = e.currentTarget.getAttribute('href');
+        updateBulkSelectionAndNavigate(h);
+      });
+    }
+  });
+
+  // on form submit, fetch persisted selection and inject hidden inputs
+  document.getElementById('bulk-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    const formEl = e.currentTarget;
+    // client-side validation of input formats
+    const action = document.getElementById('bulk-action').value;
+    const numericFields = {
+      set_price: 'bulk-price',
+      delta_price: 'bulk-price-delta',
+      set_stock: 'bulk-stock',
+      delta_stock: 'bulk-stock-delta',
+      set_cost: 'bulk-cost'
+    };
+    if(action in numericFields){
+      const fid = numericFields[action];
+      const val = document.getElementById(fid).value.trim();
+      if(!val){ alert('Ingrese un valor numérico válido para la acción seleccionada'); return; }
+      if(isNaN(Number(val))){ alert('Formato numérico inválido'); return; }
+    }
+    fetch('{% url "product_bulk_selection" %}', {method: 'GET', headers: {'Accept':'application/json'}}).then(r=>r.json()).then(function(data){
+      if(data && data.selected){
+        // remove existing hidden persisted inputs
+        document.querySelectorAll('input[name="selected_products"][data-persisted="1"]').forEach(function(n){ n.remove(); });
+        data.selected.forEach(function(id){
+          const inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = 'selected_products'; inp.value = String(id); inp.setAttribute('data-persisted','1');
+          formEl.appendChild(inp);
+        });
+      }
+      formEl.submit();
+    }).catch(function(){ formEl.submit(); });
+  });
+  document.getElementById('bulk-action').addEventListener('change', function(e){
+    const v = e.target.value;
+    document.getElementById('bulk-category').classList.toggle('hidden', v!=='set_category');
+    document.getElementById('bulk-active').classList.toggle('hidden', v!=='set_active');
+    document.getElementById('bulk-price').classList.toggle('hidden', v!=='set_price');
+    document.getElementById('bulk-price-delta').classList.toggle('hidden', v!=='delta_price');
+    document.getElementById('bulk-stock').classList.toggle('hidden', v!=='set_stock');
+    document.getElementById('bulk-stock-delta').classList.toggle('hidden', v!=='delta_stock');
+    document.getElementById('bulk-cost').classList.toggle('hidden', v!=='set_cost');
+    document.getElementById('bulk-location').classList.toggle('hidden', v!=='set_location');
+  });
+  document.getElementById('clear-bulk-selection').addEventListener('click', function(e){
+    if(!confirm('¿Limpiar selección persistida?')) return;
+    fetch('{% url "product_bulk_clear_selection" %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json'},
+      body: new URLSearchParams()
+    }).then(r=>r.json()).then(function(data){
+      if(data && data.ok){
+        // uncheck visible checkboxes
+        document.querySelectorAll('input[name="selected_products"]').forEach(function(cb){ cb.checked = false; });
+        // remove persisted hidden inputs if any
+        document.querySelectorAll('input[name="selected_products"][data-persisted="1"]').forEach(function(n){ n.remove(); });
+        document.getElementById('bulk-select-all').checked = false;
+      }
+    });
+  });
+</script>
 
 {% endblock %}

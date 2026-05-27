@@ -23,4 +23,16 @@ urlpatterns = [
     path('categories/add/', views.category_create, name='category_create'),
     path('categories/<int:pk>/edit/', views.category_edit, name='category_edit'),
     path('categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
+    # API
+    path('api/products/', views.api_product_list, name='api_product_list'),
+    path('api/products/<int:pk>/', views.api_product_detail, name='api_product_detail'),
+    path('api/products/import/preview/', views.api_product_import_preview, name='api_product_import_preview'),
+    path('import/map/', views.product_import_map, name='product_import_map'),
+    path('import/edit-cell/', views.product_import_edit_cell, name='product_import_edit_cell'),
+    path('import/selection/clear/', views.product_import_clear_selection, name='product_import_clear_selection'),
+    path('images/manager/', views.image_manager, name='image_manager'),
+    path('images/<int:pk>/unassign/', views.image_unassign, name='image_unassign'),
+    path('bulk/', views.product_bulk_action, name='product_bulk_action'),
+    path('bulk/selection/', views.product_bulk_selection, name='product_bulk_selection'),
+    path('bulk/selection/clear/', views.product_bulk_clear_selection, name='product_bulk_clear_selection'),
 ]

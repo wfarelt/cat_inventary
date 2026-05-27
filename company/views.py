@@ -1,11 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, permission_required
+from core.permissions import is_admin
 from .models import Company
 from .forms import CompanyForm
 
 
-def is_admin(user):
-    return user.is_active and user.is_superuser
 
 
 def company_list(request):
@@ -13,7 +12,7 @@ def company_list(request):
     return render(request, 'company/list.html', {'companies': qs})
 
 
-@user_passes_test(is_admin)
+@permission_required('company.add_company', raise_exception=True)
 def company_create(request):
     if request.method == 'POST':
         form = CompanyForm(request.POST)
@@ -30,7 +29,7 @@ def company_detail(request, pk):
     return render(request, 'company/detail.html', {'company': company})
 
 
-@user_passes_test(is_admin)
+@permission_required('company.change_company', raise_exception=True)
 def company_edit(request, pk):
     company = get_object_or_404(Company, pk=pk)
     if request.method == 'POST':
@@ -43,7 +42,7 @@ def company_edit(request, pk):
     return render(request, 'company/form.html', {'form': form, 'title': 'Editar Empresa'})
 
 
-@user_passes_test(is_admin)
+@permission_required('company.delete_company', raise_exception=True)
 def company_delete(request, pk):
     company = get_object_or_404(Company, pk=pk)
     if request.method == 'POST':

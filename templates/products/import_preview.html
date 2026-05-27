@@ -17,6 +17,8 @@
     <div class="mt-4">
       <button class="bg-yellow-500 text-black px-3 py-1 rounded">Confirmar importación</button>
       <a href="{% url 'product_import' %}" class="ml-2">Cancelar</a>
+      <span class="ml-4 text-sm">Seleccionadas: <strong id="selected-count">{{ selected|length }}</strong></span>
+      <button id="clear-selection" class="ml-2 text-sm text-red-600">Limpiar selección</button>
     </div>
     <h3 class="mt-4">Filas:</h3>
     <table class="min-w-full mt-2 bg-white border-collapse border">
@@ -38,14 +40,9 @@
             <td>{{ r|get_item:'_row_number' }}</td>
             {% for h in headers %}
               <td class="px-2 py-1 relative {% if r.errors|get_item:h %}bg-red-100{% endif %}">
+                <input type="text" class="editable-cell border rounded px-1 py-0" data-row="{{ r|get_item:'_row_number' }}" data-header="{{ h }}" value="{{ r|get_item:h }}">
                 {% if r.errors|get_item:h %}
-                  <span class="text-red-600">{{ r|get_item:h }}</span>
-                  <span class="ml-2 text-xs text-red-700" aria-hidden title="{{ r.errors|get_item:h|join:', ' }}">⚠</span>
-                  <div class="absolute left-0 mt-6 p-2 bg-white border rounded shadow text-xs hidden tooltip">
-                    {{ r.errors|get_item:h|join:', ' }}
-                  </div>
-                {% else %}
-                  {{ r|get_item:h }}
+                  <div class="text-red-600 text-xs mt-1">{{ r.errors|get_item:h|join:', ' }}</div>
                 {% endif %}
               </td>
             {% endfor %}
@@ -110,6 +107,11 @@
     return {visible: visibles, selected: selected};
   }
 
+  function updateCounter(count){
+    const el = document.getElementById('selected-count');
+    if(el) el.textContent = String(count);
+  }
+
   function updateSelectionAndNavigate(url){
     const data = collectVisibleAndSelected();
     const form = new URLSearchParams();
@@ -123,6 +125,9 @@
       },
       body: form
     }).then(function(resp){
+      return resp.json().catch(()=>({ok:false}));
+    }).then(function(data){
+      if(data && data.selected_count!==undefined) updateCounter(data.selected_count);
       if(url) window.location.href = url;
     }).catch(function(){ if(url) window.location.href = url; });
   }
@@ -130,6 +135,20 @@
   // on checkbox change, update server
   document.querySelectorAll('.row-select').forEach(function(cb){ cb.addEventListener('change', function(){ updateSelectionAndNavigate(); }); });
   document.getElementById('select_all').addEventListener('change', function(){ updateSelectionAndNavigate(); });
+  document.getElementById('clear-selection').addEventListener('click', function(e){
+    e.preventDefault();
+    fetch('{% url "product_import_clear_selection" %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken'), 'Accept':'application/json'},
+      body: new URLSearchParams()
+    }).then(r=>r.json()).then(function(data){
+      if(data && data.ok){
+        // uncheck visible checkboxes and update counter
+        document.querySelectorAll('.row-select').forEach(function(cb){ cb.checked = false; });
+        updateCounter(0);
+      }
+    });
+  });
 
   // intercept page links to persist selection before navigation
   document.querySelectorAll('a.preview-page-link').forEach(function(a){
@@ -137,6 +156,51 @@
       e.preventDefault();
       const href = e.currentTarget.getAttribute('href');
       updateSelectionAndNavigate(href);
+    });
+  });
+
+  // editable cell updates
+  function sendCellEdit(row, header, value, td){
+    const form = new URLSearchParams();
+    form.append('row', String(row));
+    form.append('header', header);
+    form.append('value', value);
+    fetch('{% url "product_import_edit_cell" %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json'},
+      body: form
+    }).then(r=>r.json()).then(function(data){
+      if(!data || !data.ok) return;
+      // update inline errors for this cell
+      if(td){
+        // remove previous error nodes
+        const prev = td.querySelector('.cell-error');
+        if(prev) prev.remove();
+        const errs = data.row && data.row.errors && data.row.errors[header];
+        if(errs && errs.length){
+          const div = document.createElement('div');
+          div.className = 'text-red-600 text-xs mt-1 cell-error';
+          div.textContent = errs.join(', ');
+          td.appendChild(div);
+        }
+      }
+      if(data.selected_count!==undefined) updateCounter(data.selected_count);
+    }).catch(function(){});
+  }
+
+  document.querySelectorAll('.editable-cell').forEach(function(inp){
+    const td = inp.parentElement;
+    inp.addEventListener('blur', function(e){
+      const row = inp.getAttribute('data-row');
+      const header = inp.getAttribute('data-header');
+      const value = inp.value;
+      sendCellEdit(row, header, value, td);
+    });
+    inp.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        inp.blur();
+      }
     });
   });
 </script>

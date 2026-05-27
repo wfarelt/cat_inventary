@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Compras</h2>
+      <a href="{% url 'purchases:purchase_create' %}" class="px-3 py-2 bg-blue-600 text-white rounded">Nueva compra</a>
+    </div>
+    <table class="w-full mt-4 table-auto border-collapse">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="p-2 text-left">ID</th>
+          <th class="p-2 text-left">Fecha</th>
+          <th class="p-2 text-left">Proveedor</th>
+          <th class="p-2 text-left">Factura</th>
+          <th class="p-2 text-right">Subtotal</th>
+          <th class="p-2 text-right">Total</th>
+          <th class="p-2 text-left">Estado</th>
+          <th class="p-2 text-left">Usuario</th>
+          <th class="p-2 text-left">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in page_obj %}
+          <tr class="border-t">
+            <td class="p-2">{{ p.pk }}</td>
+            <td class="p-2">{{ p.purchase_date }}</td>
+            <td class="p-2">{{ p.supplier }}</td>
+            <td class="p-2">{{ p.invoice_number }}</td>
+            <td class="p-2 text-right">{{ p.subtotal }}</td>
+            <td class="p-2 text-right">{{ p.total }}</td>
+            <td class="p-2">{{ p.get_status_display }}</td>
+            <td class="p-2">{{ p.created_by }}</td>
+            <td class="p-2"><a href="{% url 'purchases:purchase_detail' p.pk %}" class="text-blue-600">Ver</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" class="p-4">No hay compras</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="mt-4">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="mr-2">Anterior</a>{% endif %}
+      <span> Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} </span>
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="ml-2">Siguiente</a>{% endif %}
+    </div>
+  </div>
+{% endblock %}

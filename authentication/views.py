@@ -23,6 +23,10 @@ def _last_n_months(n):
     return months
 
 
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
 def dashboard_data(request):
     # category distribution
     cats = Category.objects.all().order_by('name')

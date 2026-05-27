@@ -34,12 +34,28 @@
         {% endif %}
       </nav>
     </header>
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
     {% if messages %}
-      <div class="mb-4">
-        {% for message in messages %}
-          <div class="p-2 rounded {{ message.tags }} bg-yellow-50 text-yellow-800">{{ message }}</div>
-        {% endfor %}
-      </div>
+      <script>
+        (function(){
+          function showToast(text, type){
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const colors = {success: 'bg-green-500 text-white', error: 'bg-red-500 text-white', warning: 'bg-yellow-500 text-black', info: 'bg-blue-500 text-white'};
+            const cls = colors[type] || 'bg-gray-800 text-white';
+            const el = document.createElement('div');
+            el.className = cls + ' px-4 py-2 rounded shadow-lg';
+            el.textContent = text;
+            container.appendChild(el);
+            setTimeout(function(){ el.classList.add('opacity-0'); setTimeout(()=>el.remove(),400); }, 4000);
+          }
+          // render Django messages
+          {% for message in messages %}
+            showToast({{ message|escapejs }}, '{{ message.tags }}');
+          {% endfor %}
+        })();
+      </script>
     {% endif %}
     <script>
       // Toggle products dropdown for touch/click devices

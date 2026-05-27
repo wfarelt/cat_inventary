@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Compra {{ purchase.pk }}</h2>
+      <div>
+        {% if purchase.can_edit %}
+          <a href="{% url 'purchases:purchase_create' %}" class="px-3 py-1 bg-gray-200 rounded">Editar</a>
+          <a href="{% url 'purchases:purchase_confirm' purchase.pk %}" class="px-3 py-1 bg-green-600 text-white rounded">Confirmar</a>
+        {% endif %}
+        {% if purchase.can_cancel %}
+          <a href="{% url 'purchases:purchase_cancel' purchase.pk %}" class="px-3 py-1 bg-red-600 text-white rounded">Anular</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="mt-4 grid grid-cols-2 gap-4">
+      <div>
+        <p><strong>Proveedor:</strong> {{ purchase.supplier }}</p>
+        <p><strong>Fecha:</strong> {{ purchase.purchase_date }}</p>
+      </div>
+      <div>
+        <p><strong>Factura:</strong> {{ purchase.invoice_number }} ({{ purchase.invoice_date }})</p>
+        <p><strong>Estado:</strong> {{ purchase.get_status_display }}</p>
+      </div>
+    </div>
+
+    <h3 class="mt-6">Items</h3>
+    <table class="w-full mt-2">
+      <thead><tr class="bg-gray-100"><th class="p-2 text-left">Producto</th><th class="p-2 text-right">Cantidad</th><th class="p-2 text-right">Costo</th><th class="p-2 text-right">Subtotal</th></tr></thead>
+      <tbody>
+        {% for it in purchase.items.all %}
+          <tr class="border-t">
+            <td class="p-2">{{ it.product }}</td>
+            <td class="p-2 text-right">{{ it.quantity }}</td>
+            <td class="p-2 text-right">{{ it.unit_cost }}</td>
+            <td class="p-2 text-right">{{ it.subtotal }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="mt-4 text-right">
+      <div>Subtotal: <strong>{{ purchase.subtotal }}</strong></div>
+      <div>Descuento: <strong>{{ purchase.discount }}</strong></div>
+      <div class="text-xl font-bold">Total: <strong>{{ purchase.total }}</strong></div>
+    </div>
+    <div class="mt-4"><a href="{% url 'purchases:purchase_list' %}" class="text-sm">Volver a listado</a></div>
+  </div>
+{% endblock %}

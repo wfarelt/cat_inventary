@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <h2 class="text-lg font-bold">Mapear columnas de importación</h2>
+  <p class="text-sm text-gray-600">Relaciona cada columna del archivo con un campo de producto.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <table class="min-w-full mt-4">
+      <thead><tr><th>Columna</th><th>Mapear a</th></tr></thead>
+      <tbody>
+        {% for h in headers %}
+        <tr>
+          <td class="px-2 py-1">{{ h }}</td>
+          <td class="px-2 py-1">
+            <select name="map_{{ h }}" class="border px-2 py-1">
+              <option value="">-- ignorar --</option>
+              {% for f in fields %}
+                <option value="{{ f }}">{{ f }}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="mt-4">
+      <label class="text-sm">Guardar como plantilla (opcional)</label>
+      <input name="template_name" class="border px-2 py-1" placeholder="Nombre de plantilla">
+    </div>
+
+    <div class="mt-4">
+      <button class="bg-blue-600 text-white px-3 py-1 rounded">Aplicar y previsualizar</button>
+      <a href="{% url 'product_import' %}" class="ml-2">Cancelar</a>
+    </div>
+  </form>
+
+  {% if templates %}
+    <div class="mt-6">
+      <h3 class="font-semibold">Plantillas guardadas</h3>
+      <ul>
+        {% for name, map in templates.items %}
+          <li class="py-1">{{ name }} <small class="text-gray-600">({{ map|length }} campos)</small></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

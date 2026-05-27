@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <div class="flex justify-between items-center">
+    <h2 class="text-lg font-bold">Gestor de Imágenes</h2>
+    <form method="get" class="flex gap-2">
+      <input name="q" value="{{ q }}" placeholder="Código o descripción" class="border px-2 py-1">
+      <select name="has_image" class="border px-2 py-1">
+        <option value="">-- Cualquiera --</option>
+        <option value="1" {% if has_image == '1' %}selected{% endif %}>Con imagen</option>
+        <option value="0" {% if has_image == '0' %}selected{% endif %}>Sin imagen</option>
+      </select>
+      <button class="bg-blue-600 text-white px-3 py-1 rounded">Filtrar</button>
+    </form>
+  </div>
+
+  <table class="min-w-full mt-4">
+    <thead><tr><th>Imagen</th><th>Código</th><th>Descripción</th><th>Categoría</th><th>Acciones</th></tr></thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td class="px-2 py-1">
+          {% if p.image %}
+            <img src="{{ p.image.url }}" alt="{{ p.code }}" width="60">
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td class="px-2 py-1">{{ p.code }}</td>
+        <td class="px-2 py-1">{{ p.description }}</td>
+        <td class="px-2 py-1">{% if p.category %}{{ p.category.name }}{% else %}-{% endif %}</td>
+        <td class="px-2 py-1">
+          {% if p.image %}
+            <form method="post" action="{% url 'image_unassign' p.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button class="text-red-600">Desasignar</button>
+            </form>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if paginator.num_pages > 1 %}
+  <div class="mt-4">
+    <span>Página {{ products.number }} de {{ paginator.num_pages }}</span>
+    <div class="mt-2">
+      {% if products.has_previous %}
+        <a href="?page={{ products.previous_page_number }}&q={{ q }}&has_image={{ has_image }}" class="mr-2">Anterior</a>
+      {% endif %}
+      {% if products.has_next %}
+        <a href="?page={{ products.next_page_number }}&q={{ q }}&has_image={{ has_image }}">Siguiente</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

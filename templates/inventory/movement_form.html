@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <h2 class="text-xl font-bold">Registrar movimiento</h2>
+  <form method="post" class="mt-4 space-y-2">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div>
+      {{ form.product.label_tag }} {{ form.product }}
+    </div>
+    <div>
+      {{ form.movement_type.label_tag }} {{ form.movement_type }}
+    </div>
+    <div>
+      {{ form.quantity.label_tag }} {{ form.quantity }}
+    </div>
+    <div>
+      {{ form.unit_cost.label_tag }} {{ form.unit_cost }}
+    </div>
+    <div>
+      {{ form.reason.label_tag }} {{ form.reason }}
+    </div>
+    <div>
+      {{ form.reference.label_tag }} {{ form.reference }}
+    </div>
+    <div>
+      {{ form.notes.label_tag }} {{ form.notes }}
+    </div>
+    <div>
+      <label>Dirección (solo para corrección manual):</label>
+      <select name="direction"><option value="in">Entrada</option><option value="out">Salida</option></select>
+    </div>
+    <div>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded">Registrar</button>
+      <a href="{% url 'inventory:movements_list' %}" class="ml-2">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

@@ -1,20 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import permission_required
+from core.permissions import is_admin
 from .models import SiteConfiguration
 from .forms import SiteConfigurationForm
 
 
-def is_admin(user):
-    return user.is_active and user.is_superuser
 
 
-@user_passes_test(is_admin)
+@permission_required('settings_app.change_siteconfiguration', raise_exception=True)
 def settings_list(request):
     qs = SiteConfiguration.objects.all().order_by('key')
     return render(request, 'settings_app/list.html', {'items': qs})
 
 
-@user_passes_test(is_admin)
+@permission_required('settings_app.change_siteconfiguration', raise_exception=True)
 def settings_edit(request, pk=None):
     if pk:
         item = get_object_or_404(SiteConfiguration, pk=pk)
