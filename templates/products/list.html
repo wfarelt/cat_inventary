@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <div class="flex justify-between items-center">
+    <h2 class="text-lg font-bold">Productos</h2>
+    <div>
+      <a href="{% url 'product_import' %}" class="mr-2">Importar Excel</a>
+      <a href="{% url 'upload_images_zip' %}" class="mr-2">Subir imágenes ZIP</a>
+      {% if request.user.is_superuser %}
+        <a href="{% url 'product_create' %}" class="bg-yellow-500 text-black px-3 py-1 rounded">Nuevo</a>
+      {% endif %}
+    </div>
+  </div>
+  <table id="products-table" class="min-w-full mt-4">
+    <thead>
+      <tr>
+        <th>Imagen</th>
+        <th>Código</th>
+        <th>Descripción</th>
+        <th>Categoría</th>
+        <th>Precio</th>
+        <th>Stock</th>
+        <th>Reservado</th>
+        <th>Disponible</th>
+        <th>Ubicación</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td>{% if p.image %}<img src="{{ p.image.url }}" alt="{{ p.code }}" width="40">{% endif %}</td>
+        <td>{{ p.code }}</td>
+        <td>{{ p.description }}</td>
+        <td>{% if p.category %}{{ p.category.name }}{% else %}-{% endif %}</td>
+        <td>{{ p.price }}</td>
+        <td>{{ p.stock }}</td>
+        <td>{{ p.stock_reserved }}</td>
+        <td>{{ p.available_stock }}</td>
+        <td>{{ p.location }}</td>
+        <td>{{ p.is_active }}</td>
+        <td>
+          <a href="{% url 'product_detail' p.pk %}">Ver</a>
+          {% if request.user.is_superuser %} | <a href="{% url 'product_edit' p.pk %}">Editar</a>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

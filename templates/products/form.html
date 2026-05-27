@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow max-w-lg">
+  <h2 class="text-lg font-bold">{% if product %}Editar{% else %}Nuevo{% endif %} Producto</h2>
+  <form method="post" enctype="multipart/form-data" class="mt-4">
+    {% csrf_token %}
+    <div class="flex items-center">
+      <div class="flex-1">{{ form.as_p }}</div>
+      <div class="ml-4">
+        <button type="button" id="new_category_btn" class="bg-gray-200 px-2 py-1 rounded">Nueva categoría</button>
+      </div>
+    </div>
+    <div>
+      <button class="bg-yellow-500 text-black px-3 py-1 rounded">Guardar</button>
+      <a href="{% url 'product_list' %}" class="ml-2">Cancelar</a>
+    </div>
+  </form>
+</div>
+<!-- Modal for creating category -->
+<div id="category_modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+  <div class="bg-white p-4 rounded w-96">
+    <h3 class="font-semibold">Nueva Categoría</h3>
+    <form id="category_modal_form">
+      <div class="mt-2"><label>Nombre</label><input name="name" class="border rounded w-full px-2 py-1"></div>
+      <div class="mt-2"><label>Descripción</label><textarea name="description" class="border rounded w-full px-2 py-1"></textarea></div>
+      <div class="mt-2"><label><input type="checkbox" name="is_active" checked> Activa</label></div>
+      <div class="mt-3">
+        <button type="button" id="category_modal_save" class="bg-blue-600 text-white px-3 py-1 rounded">Crear</button>
+        <button type="button" id="category_modal_cancel" class="ml-2">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const btn = document.getElementById('new_category_btn');
+    const modal = document.getElementById('category_modal');
+    const cancel = document.getElementById('category_modal_cancel');
+    const save = document.getElementById('category_modal_save');
+    btn && btn.addEventListener('click', function(){ modal.classList.remove('hidden'); modal.classList.add('flex'); });
+    cancel && cancel.addEventListener('click', function(){ modal.classList.add('hidden'); modal.classList.remove('flex'); });
+    save && save.addEventListener('click', function(){
+      const form = document.getElementById('category_modal_form');
+      const data = new FormData(form);
+      fetch('{% url "category_create" %}', { method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'} })
+        .then(r => r.json())
+        .then(obj => {
+          // add new option to category select
+          const sel = document.getElementById('id_category');
+          if(sel){
+            const opt = document.createElement('option'); opt.value = obj.id; opt.text = obj.name; opt.selected = true; sel.appendChild(opt);
+          }
+          modal.classList.add('hidden'); modal.classList.remove('flex');
+        }).catch(e => { alert('Error creando categoría'); });
+    });
+  })();
+</script>
+{% endblock %}

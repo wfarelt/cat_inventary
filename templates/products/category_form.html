@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4 bg-white rounded shadow">
+  {% if category %}<h2 class="text-lg font-bold">Editar Categoría</h2>{% else %}<h2 class="text-lg font-bold">Nueva Categoría</h2>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="mt-2">
+      <button class="bg-blue-600 text-white px-3 py-1 rounded">Guardar</button>
+      <a href="{% url 'category_list' %}" class="ml-2">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

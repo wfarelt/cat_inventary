@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load product_extras %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <h2 class="text-lg font-bold">Previsualizar importación</h2>
+  <form method="post" action="{% url 'product_import_confirm' %}">
+    {% csrf_token %}
+    <div>
+      <label>Si existen productos:</label>
+      <select name="action">
+        <option value="add_new">Agregar solo nuevos</option>
+        <option value="update_existing">Actualizar existentes</option>
+        <option value="ignore_existing">Ignorar existentes</option>
+      </select>
+    </div>
+    <div class="mt-4">
+      <button class="bg-yellow-500 text-black px-3 py-1 rounded">Confirmar importación</button>
+      <a href="{% url 'product_import' %}" class="ml-2">Cancelar</a>
+    </div>
+    <h3 class="mt-4">Filas:</h3>
+    <table class="min-w-full mt-2 bg-white border-collapse border">
+      <thead>
+        <tr class="bg-gray-100">
+          <th><input type="checkbox" id="select_all" title="Seleccionar todo"></th>
+          <th>#</th>
+          {% for h in headers %}<th>{{ h }}</th>{% endfor %}
+          <th>Existente</th>
+          <th>Errores</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr class="{% if r.errors %}bg-red-50{% endif %}">
+            <td>
+              <input type="checkbox" name="selected_rows" value="{{ r|get_item:'_row_number' }}" class="row-select" {% if r|get_item:'_row_number' in selected %}checked{% endif %}>
+            </td>
+            <td>{{ r|get_item:'_row_number' }}</td>
+            {% for h in headers %}
+              <td class="px-2 py-1 relative {% if r.errors|get_item:h %}bg-red-100{% endif %}">
+                {% if r.errors|get_item:h %}
+                  <span class="text-red-600">{{ r|get_item:h }}</span>
+                  <span class="ml-2 text-xs text-red-700" aria-hidden title="{{ r.errors|get_item:h|join:', ' }}">⚠</span>
+                  <div class="absolute left-0 mt-6 p-2 bg-white border rounded shadow text-xs hidden tooltip">
+                    {{ r.errors|get_item:h|join:', ' }}
+                  </div>
+                {% else %}
+                  {{ r|get_item:h }}
+                {% endif %}
+              </td>
+            {% endfor %}
+            <td>{% if r.exists %}Sí{% else %}No{% endif %}</td>
+            <td>
+              {% if r.errors %}
+                <ul class="text-red-600">
+                {% for key, vals in r.errors.items %}
+                  {% for v in vals %}
+                    <li><strong>{{ key }}</strong>: {{ v }}</li>
+                  {% endfor %}
+                {% endfor %}
+                </ul>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <script>
+      document.getElementById('select_all').addEventListener('change', function(e){
+        const checked = e.target.checked;
+        document.querySelectorAll('.row-select').forEach(function(cb){ cb.checked = checked; });
+      });
+    </script>
+  </form>
+</div>
+<script>
+  // show simple tooltip on hover/focus for cell warnings
+  document.querySelectorAll('td .tooltip').forEach(function(t){
+    const cell = t.parentElement;
+    cell.addEventListener('mouseenter', function(){ t.classList.remove('hidden'); });
+    cell.addEventListener('mouseleave', function(){ t.classList.add('hidden'); });
+    cell.addEventListener('focusin', function(){ t.classList.remove('hidden'); });
+    cell.addEventListener('focusout', function(){ t.classList.add('hidden'); });
+  });
+
+  // selection persistence across pages
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function collectVisibleAndSelected(){
+    const visibles = [];
+    const selected = [];
+    document.querySelectorAll('.row-select').forEach(function(cb){
+      const val = parseInt(cb.value);
+      visibles.push(val);
+      if(cb.checked) selected.push(val);
+    });
+    return {visible: visibles, selected: selected};
+  }
+
+  function updateSelectionAndNavigate(url){
+    const data = collectVisibleAndSelected();
+    const form = new URLSearchParams();
+    data.visible.forEach(v => form.append('visible[]', v));
+    data.selected.forEach(s => form.append('selected[]', s));
+    fetch('{% url "product_import_selection" %}', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json'
+      },
+      body: form
+    }).then(function(resp){
+      if(url) window.location.href = url;
+    }).catch(function(){ if(url) window.location.href = url; });
+  }
+
+  // on checkbox change, update server
+  document.querySelectorAll('.row-select').forEach(function(cb){ cb.addEventListener('change', function(){ updateSelectionAndNavigate(); }); });
+  document.getElementById('select_all').addEventListener('change', function(){ updateSelectionAndNavigate(); });
+
+  // intercept page links to persist selection before navigation
+  document.querySelectorAll('a.preview-page-link').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      const href = e.currentTarget.getAttribute('href');
+      updateSelectionAndNavigate(href);
+    });
+  });
+</script>
+{% if pagination %}
+  <div class="mt-2 text-sm">
+    <span>Página {{ pagination.page }} (mostrando {{ pagination.per_page }} filas) — total {{ pagination.total }}</span>
+    <div class="mt-1">
+      {% if pagination.page > 1 %}
+        <a class="preview-page-link mr-2" href="?page={{ pagination.page|add:-1 }}">Anterior</a>
+      {% endif %}
+      {% if pagination.page * pagination.per_page < pagination.total %}
+        <a class="preview-page-link" href="?page={{ pagination.page|add:1 }}">Siguiente</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

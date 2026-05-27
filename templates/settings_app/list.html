@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <h2 class="text-lg font-bold">Configuraciones del sitio</h2>
+  <a href="{% url 'settings_edit' %}" class="bg-yellow-500 text-black px-3 py-1 rounded">Nueva</a>
+  <ul class="mt-4">
+    {% for it in items %}
+      <li class="py-2">
+        <strong>{{ it.key }}</strong>: {{ it.value|truncatechars:120 }}
+        <a href="{% url 'settings_edit' it.pk %}" class="ml-2">Editar</a>
+      </li>
+    {% empty %}
+      <li>No hay configuraciones.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

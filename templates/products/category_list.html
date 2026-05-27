@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4 bg-white rounded shadow">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-bold">Categorías</h2>
+    <div class="flex items-center">
+      <form method="get" class="mr-2">
+        <input name="q" value="{{ q }}" placeholder="Buscar..." class="border rounded px-2 py-1">
+      </form>
+      <a href="{% url 'category_create' %}" class="bg-blue-600 text-white px-3 py-1 rounded">Nueva Categoría</a>
+    </div>
+  </div>
+  <table class="min-w-full mt-4 bg-white border-collapse border">
+    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Descripción</th><th>Activo</th><th></th></tr></thead>
+    <tbody>
+      {% for c in categories %}
+        <tr class="border-t">
+          <td class="px-2 py-1">{{ c.name }}</td>
+          <td class="px-2 py-1">{{ c.description|default:'' }}</td>
+          <td class="px-2 py-1">{% if c.is_active %}Sí{% else %}No{% endif %}</td>
+          <td class="px-2 py-1"><a href="{% url 'category_edit' c.pk %}" class="text-blue-600">Editar</a> |
+            <form method="post" action="{% url 'category_delete' c.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button class="text-red-600">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">No hay categorías.</td></tr>
+      {% endfor %}
+      </tbody>
+  </table>
+    {% if paginator.num_pages > 1 %}
+      <div class="mt-4">
+        {% if categories.has_previous %}<a href="?page={{ categories.previous_page_number }}&q={{ q }}" class="mr-2">Anterior</a>{% endif %}
+        <span>Página {{ categories.number }} de {{ paginator.num_pages }}</span>
+        {% if categories.has_next %}<a href="?page={{ categories.next_page_number }}&q={{ q }}" class="ml-2">Siguiente</a>{% endif %}
+      </div>
+    {% endif %}
+</div>
+{% endblock %}

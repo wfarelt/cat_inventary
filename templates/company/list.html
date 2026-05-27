@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <div class="flex justify-between items-center">
+    <h2 class="text-lg font-bold">Empresas</h2>
+    {% if request.user.is_superuser %}
+      <a href="{% url 'company_create' %}" class="bg-yellow-500 text-black px-3 py-1 rounded">Nueva Empresa</a>
+    {% endif %}
+  </div>
+  <table class="min-w-full mt-4">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>RUC</th>
+        <th>Teléfono</th>
+        <th>Activo</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in companies %}
+      <tr>
+        <td><a href="{% url 'company_detail' c.pk %}">{{ c.name }}</a></td>
+        <td>{{ c.ruc }}</td>
+        <td>{{ c.phone }}</td>
+        <td>{{ c.is_active }}</td>
+        <td>
+          {% if request.user.is_superuser %}
+            <a href="{% url 'company_edit' c.pk %}" class="mr-2">Editar</a>
+            <a href="{% url 'company_delete' c.pk %}">Borrar</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No hay empresas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

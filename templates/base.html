@@ -13,12 +13,71 @@
       <nav>
         <a href="/" class="mr-4">Inicio</a>
         {% if request.user.is_authenticated %}
+          <div class="relative inline-block mr-4 group">
+            <button id="products_menu_btn" aria-expanded="false" class="font-medium focus:outline-none">Productos ▾</button>
+            <div id="products_menu" class="absolute left-0 mt-2 w-48 bg-white border rounded shadow-sm hidden group-hover:block z-50">
+              <a href="{% url 'product_list' %}" class="block px-3 py-2 hover:bg-gray-100">Listado</a>
+              <a href="{% url 'product_create' %}" class="block px-3 py-2 hover:bg-gray-100">Agregar</a>
+              <a href="{% url 'product_import' %}" class="block px-3 py-2 hover:bg-gray-100">Importar</a>
+              <a href="{% url 'upload_images_zip' %}" class="block px-3 py-2 hover:bg-gray-100">Imágenes</a>
+              <div class="border-t my-1"></div>
+              <a href="{% url 'category_list' %}" class="block px-3 py-2 hover:bg-gray-100">Categorías</a>
+              <a href="{% url 'kit_list' %}" class="block px-3 py-2 hover:bg-gray-100">Kits</a>
+            </div>
+          </div>
+          <a href="/company/" class="mr-4">Empresas</a>
+          <a href="/users/" class="mr-4">Usuarios</a>
+          <a href="/settings/list/" class="mr-4">Configuración</a>
           <a href="/accounts/logout/">Cerrar sesión</a>
         {% else %}
           <a href="/accounts/login/">Iniciar sesión</a>
         {% endif %}
       </nav>
     </header>
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="p-2 rounded {{ message.tags }} bg-yellow-50 text-yellow-800">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <script>
+      // Toggle products dropdown for touch/click devices
+      (function(){
+        const btn = document.getElementById('products_menu_btn');
+        const menu = document.getElementById('products_menu');
+        if(!btn || !menu) return;
+        btn.addEventListener('click', function(e){
+          const shown = !menu.classList.contains('hidden');
+          if(shown) {
+            menu.classList.add('hidden');
+            btn.setAttribute('aria-expanded','false');
+          } else {
+            menu.classList.remove('hidden');
+            btn.setAttribute('aria-expanded','true');
+          }
+          e.stopPropagation();
+        });
+        // keyboard accessibility
+        btn.addEventListener('keydown', function(e){
+          if(e.key === 'Enter' || e.key === ' '){
+            e.preventDefault(); btn.click();
+          } else if(e.key === 'ArrowDown'){
+            e.preventDefault();
+            menu.classList.remove('hidden'); btn.setAttribute('aria-expanded','true');
+            const first = menu.querySelector('a'); first && first.focus();
+          }
+        });
+        menu.querySelectorAll('a').forEach(function(a){ a.setAttribute('tabindex','0'); a.addEventListener('keydown', function(e){ if(e.key==='Escape'){ btn.click(); btn.focus(); } }); });
+        // close when clicking outside
+        document.addEventListener('click', function(){
+          if(!menu.classList.contains('hidden')){
+            menu.classList.add('hidden');
+            btn.setAttribute('aria-expanded','false');
+          }
+        });
+      })();
+    </script>
     {% block content %}
     <p>ERP inicial - skeleton</p>
     {% endblock %}

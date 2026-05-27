@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4 bg-white rounded shadow">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-bold">Kits de Producto</h2>
+    <a href="{% url 'kit_create' %}" class="bg-blue-600 text-white px-3 py-1 rounded">Nuevo Kit</a>
+  </div>
+  <table class="min-w-full mt-4 bg-white border-collapse border">
+    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Activo</th><th></th></tr></thead>
+    <tbody>
+      {% for k in kits %}
+        <tr class="border-t">
+          <td class="px-2 py-1">{{ k.name }}</td>
+          <td class="px-2 py-1">{% if k.is_active %}Sí{% else %}No{% endif %}</td>
+          <td class="px-2 py-1"><a href="{% url 'kit_detail' k.pk %}" class="text-blue-600">Ver</a> | <a href="{% url 'kit_edit' k.pk %}" class="text-blue-600">Editar</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">No hay kits.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

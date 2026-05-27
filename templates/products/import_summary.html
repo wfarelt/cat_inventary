@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  <h2 class="text-lg font-bold">Resumen de importación</h2>
+  <p>Creados: {{ summary.created }}</p>
+  <p>Actualizados: {{ summary.updated }}</p>
+  {% if summary.errors %}
+    <h3>Filas ignoradas por errores</h3>
+    <ul>
+      {% for e in summary.errors %}
+        <li>Fila {{ e.row }}:
+          <ul>
+            {% for key, vals in e.errors.items %}
+              {% for v in vals %}
+                <li><strong>{{ key }}</strong>: {{ v }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <a href="{% url 'product_list' %}">Volver al listado</a>
+</div>
+{% endblock %}

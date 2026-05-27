@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow max-w-lg">
+  <h2 class="text-lg font-bold">Importar productos desde Excel</h2>
+  <p>Sube un archivo `.xlsx` con encabezados: code, description, cross_reference, category, cost, price, stock, location, stock_min</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="file" accept=".xlsx" required>
+    <div class="mt-4">
+      <button class="bg-yellow-500 text-black px-3 py-1 rounded">Subir y previsualizar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

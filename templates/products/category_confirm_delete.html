@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4 bg-white rounded shadow">
+  <h2 class="text-lg font-bold">Eliminar Categoría</h2>
+  {% if category.products.count > 0 %}
+    <p class="text-red-600">La categoría tiene {{ category.products.count }} producto(s) asociados.</p>
+    <p>Antes de eliminar puedes reasignar los productos a otra categoría.</p>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <label>Reasignar a:</label>
+      <select name="reassign_to" class="border rounded px-2 py-1">
+        <option value="">-- Ninguna --</option>
+        {% for c in categories %}
+          {% if c.pk != category.pk %}
+            <option value="{{ c.pk }}">{{ c.name }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+      <div class="mt-2">
+        <button class="bg-red-600 text-white px-3 py-1 rounded">Eliminar y reasignar</button>
+        <a href="{% url 'category_list' %}" class="ml-2">Cancelar</a>
+      </div>
+    </form>
+  {% else %}
+    <p>¿Eliminar la categoría "{{ category.name }}"? Esta acción no eliminará productos, solo la categoría.</p>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <button class="bg-red-600 text-white px-3 py-1 rounded">Eliminar</button>
+      <a href="{% url 'category_list' %}" class="ml-2">Cancelar</a>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
