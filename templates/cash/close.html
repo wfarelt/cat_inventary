@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-4">Close Cash</h2>
+  <div>Opening: {{ opening.opening_amount }} at {{ opening.opened_at }}</div>
+  <div>Expected: {{ expected }}</div>
+  <form method="post">{% csrf_token %}
+    <label>Real amount: <input name="real_amount" value="{{ expected }}" /></label>
+    <button class="btn" type="submit">Close</button>
+  </form>
+</div>
+{% endblock %}

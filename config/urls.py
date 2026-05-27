@@ -10,4 +10,5 @@ urlpatterns = [
     path('settings/', include('settings_app.urls')),
     path('products/', include('products.urls')),
     path('inventory/', include('inventory.urls')),
+    path('dashboard/', include('dashboard.urls')),
 ]

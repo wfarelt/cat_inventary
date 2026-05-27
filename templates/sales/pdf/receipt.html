@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt {{ sale.number }}</title>
+  <style>body{font-family: Arial, sans-serif; font-size:12px} table{width:100%; border-collapse: collapse} th,td{border:1px solid #ccc; padding:6px}</style>
+</head>
+<body>
+  <h2>Recibo de Venta</h2>
+  <div>No: {{ sale.number }} - Fecha: {{ sale.sale_date }}</div>
+  <div>Cliente: {{ sale.customer.name }}</div>
+  <h4>Items</h4>
+  <table>
+    <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+    <tbody>
+      {% for it in sale.items.all %}
+      <tr>
+        <td>{{ it.product.code }} - {{ it.product.description }}</td>
+        <td>{{ it.quantity }}</td>
+        <td>{{ it.unit_price }}</td>
+        <td>{{ it.subtotal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="text-align:right;margin-top:10px">
+    <div>Total: {{ sale.total }}</div>
+    <div>Pagado: {{ sale.paid_amount }}</div>
+    <div>Saldo: {{ sale.pending_amount }}</div>
+  </div>
+  <h4>Pagos</h4>
+  <ul>
+    {% for p in sale.payments.all %}
+      <li>{{ p.payment_date }} - {{ p.amount }} ({{ p.created_by }})</li>
+    {% empty %}
+      <li>No payments</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

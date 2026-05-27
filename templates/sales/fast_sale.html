@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-md mx-auto p-4">
+  <h2 class="text-xl font-bold mb-4">Fast Sale (Mobile)</h2>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+      {{ sale_form.customer.label_tag }}
+      {{ sale_form.customer }}
+    </div>
+    <div class="mb-3">
+      {{ quick_customer.name.label_tag }}
+      {{ quick_customer.name }}
+    </div>
+
+    <div class="mb-3">
+      {{ sale_form.payment_type.label_tag }} {{ sale_form.payment_type }}
+    </div>
+
+    <table class="w-full mb-3 text-sm">
+      <thead>
+        <tr class="text-left"><th>Product</th><th>Qty</th><th>Price</th></tr>
+      </thead>
+      <tbody>
+        {% for form in formset.forms %}
+        <tr>
+          <td>{{ form.product }}</td>
+          <td>{{ form.quantity }}</td>
+          <td>{{ form.unit_price }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="flex gap-2">
+      <button class="btn btn-primary" type="submit">Create Sale</button>
+      <a class="btn btn-secondary" href="/">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// Minimal client-side UX: focus first product input
+document.addEventListener('DOMContentLoaded', function(){
+  const first = document.querySelector('select[name$="-product"]') || document.querySelector('input[name$="-product_search"]');
+  if(first) first.focus();
+});
+</script>
+
+<style>
+.autocomplete-list { position: absolute; background: white; border: 1px solid #ddd; z-index: 50; max-height: 220px; overflow: auto; width: 100%; }
+.autocomplete-item { padding: 6px 8px; cursor: pointer; }
+.autocomplete-item:hover { background: #f0f0f0; }
+</style>
+
+<script>
+// Simple autocomplete using products product_autocomplete endpoint
+;(function(){
+  function debounce(fn, wait){
+    let t;
+    return function(){
+      const args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function(){ fn.apply(null, args); }, wait);
+    }
+  }
+
+  function createList() {
+    const ul = document.createElement('div');
+    ul.className = 'autocomplete-list';
+    ul.style.display = 'none';
+    document.body.appendChild(ul);
+    return ul;
+  }
+
+  function positionList(input, list){
+    const r = input.getBoundingClientRect();
+    list.style.left = (window.scrollX + r.left) + 'px';
+    list.style.top = (window.scrollY + r.bottom) + 'px';
+    list.style.width = r.width + 'px';
+  }
+
+  function wire(input){
+    const list = createList();
+    const row = input.closest('tr');
+    const select = row ? row.querySelector('select[name$="-product"]') : null;
+
+    const doSearch = debounce(function(q){
+      if(!q) { list.style.display = 'none'; return; }
+      fetch('/products/search/autocomplete/?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          list.innerHTML = '';
+          (data.results || []).forEach(function(it){
+            const d = document.createElement('div');
+            d.className = 'autocomplete-item';
+            d.textContent = it.text;
+            d.dataset.id = it.id;
+            d.addEventListener('click', function(){
+              if(select){
+                // set select value
+                select.value = this.dataset.id;
+                // trigger change event
+                select.dispatchEvent(new Event('change'));
+              }
+              input.value = this.textContent;
+              list.style.display = 'none';
+            });
+            list.appendChild(d);
+          });
+          if((data.results || []).length){
+            positionList(input, list);
+            list.style.display = '';
+          } else {
+            list.style.display = 'none';
+          }
+        }).catch(()=>{ list.style.display = 'none'; });
+    }, 250);
+
+    input.addEventListener('input', function(e){ doSearch(this.value); });
+    input.addEventListener('blur', function(){ setTimeout(()=> list.style.display='none', 150); });
+    window.addEventListener('resize', function(){ if(list.style.display!='none') positionList(input,list); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.product-autocomplete').forEach(wire);
+  });
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-4">Open Cash</h2>
+  <form method="post">{% csrf_token %}
+    <label>Opening amount: <input name="opening_amount" value="0.00" /></label>
+    <button class="btn" type="submit">Open</button>
+  </form>
+</div>
+{% endblock %}

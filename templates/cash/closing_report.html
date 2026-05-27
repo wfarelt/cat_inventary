@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-4">Closing Report (Opening {{ report.opening.opened_at }})</h2>
+  <div>Opening amount: {{ report.opening.opening_amount }}</div>
+  <div>Expected (calc): {{ report.expected }}</div>
+  <h3 class="mt-4">Totals by Type</h3>
+  <ul>
+    {% for k, v in report.totals_by_type.items %}
+      <li>{{ k }}: {{ v }}</li>
+    {% endfor %}
+  </ul>
+  <h3 class="mt-4">Movements</h3>
+  <table class="w-full">
+    <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th><th>Notes</th></tr></thead>
+    <tbody>
+      {% for m in report.movements %}
+      <tr>
+        <td>{{ m.created_at }}</td>
+        <td>{{ m.get_movement_type_display }}</td>
+        <td>{{ m.amount }}</td>
+        <td>{{ m.reference }}</td>
+        <td>{{ m.notes }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No movements</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

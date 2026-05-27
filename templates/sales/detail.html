@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-2">Sale {{ sale.number }}</h2>
+  <div>Customer: {{ sale.customer.name }}</div>
+  <div>Date: {{ sale.sale_date }}</div>
+  <div>Status: {{ sale.get_status_display }}</div>
+  <div>Total: {{ sale.total }} Paid: {{ sale.paid_amount }} Pending: {{ sale.pending_amount }}</div>
+
+  <h3 class="mt-4">Items</h3>
+  <table class="w-full">
+    <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+    <tbody>
+      {% for it in sale.items.all %}
+      <tr>
+        <td>{{ it.product.code }} - {{ it.product.description }}</td>
+        <td>{{ it.quantity }}</td>
+        <td>{{ it.unit_price }}</td>
+        <td>{{ it.subtotal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="mt-4">
+    <form method="post" action="{% url 'sales:sale_payment' sale.pk %}">{% csrf_token %}
+      <label>Amount: <input name="amount" /></label>
+      <label>Notes: <input name="notes" /></label>
+      <button class="btn" type="submit">Register Payment</button>
+    </form>
+  </div>
+
+  <div class="mt-4">
+    {% if sale.status != 'EJECUTADO' %}
+      <a class="btn" href="{% url 'sales:sale_execute' sale.pk %}">Execute</a>
+    {% endif %}
+    {% if sale.status != 'RESERVA' %}
+      <a class="btn" href="{% url 'sales:sale_reserve' sale.pk %}">Reserve</a>
+    {% endif %}
+    {% if sale.status != 'ANULADO' %}
+      <a class="btn btn-danger" href="{% url 'sales:sale_cancel' sale.pk %}">Cancel</a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

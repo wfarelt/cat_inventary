@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="p-4">
+  <h1 class="text-2xl font-bold">Dashboard</h1>
+  <div class="mt-3">
+    <form method="get">
+      <select name="range" onchange="this.form.submit()">
+        <option value="today" {% if metrics.start == metrics.end %}{% if metrics.start|stringformat:"s" == metrics.end|stringformat:"s" %}{% endif %}{% endif %}>Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="week">Last 7 days</option>
+        <option value="month">Last 30 days</option>
+      </select>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-4 gap-4 mt-4">
+    <div class="card">
+      <div class="text-sm">Sales (range)</div>
+      <div class="text-xl font-bold">{{ metrics.kpis.sales_total }}</div>
+      <div class="text-xs text-muted">Count: {{ metrics.kpis.sales_count }}</div>
+    </div>
+    <div class="card">
+      <div class="text-sm">Purchases (range)</div>
+      <div class="text-xl font-bold">{{ metrics.kpis.purchases_total }}</div>
+      <div class="text-xs text-muted">Count: {{ metrics.kpis.purchases_count }}</div>
+    </div>
+    <div class="card">
+      <div class="text-sm">Cash</div>
+      <div class="text-xl font-bold">{{ metrics.kpis.current_cash }}</div>
+      <div class="text-xs text-muted">Openings: {{ metrics.modules.cash_openings }}</div>
+    </div>
+    <div class="card">
+      <div class="text-sm">Accounts receivable</div>
+      <div class="text-xl font-bold">{{ metrics.kpis.accounts_receivable }}</div>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <h2 class="text-lg font-semibold">Modules</h2>
+    <div class="grid grid-cols-4 gap-4 mt-2">
+      <div class="card">
+        <div class="text-sm">Products</div>
+        <div class="text-xl font-bold">{{ metrics.modules.products_count }}</div>
+        <div class="text-xs">Active: {{ metrics.modules.active_products }}</div>
+        <div class="mt-2"><a href="{{ metrics.modules.admin_links.products }}">Manage</a></div>
+      </div>
+      <div class="card">
+        <div class="text-sm">Purchases</div>
+        <div class="text-xl font-bold">{{ metrics.modules.purchases_total_all }}</div>
+        <div class="text-xs">Suppliers: {{ metrics.modules.suppliers_count }}</div>
+        <div class="mt-2"><a href="{{ metrics.modules.admin_links.purchases }}">Manage</a></div>
+      </div>
+      <div class="card">
+        <div class="text-sm">Inventory</div>
+        <div class="text-xl font-bold">Movements: {{ metrics.modules.stock_movements }}</div>
+        <div class="mt-2"><a href="{{ metrics.modules.admin_links.inventory }}">Manage</a></div>
+      </div>
+      <div class="card">
+        <div class="text-sm">Cash</div>
+        <div class="text-xl font-bold">Openings: {{ metrics.modules.cash_openings }}</div>
+        <div class="mt-2"><a href="{{ metrics.modules.admin_links.cash }}">Manage</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 gap-6">
+    <div class="card p-4">
+      <h3>Sales last 7 days</h3>
+      <canvas id="chartSales"></canvas>
+    </div>
+    <div class="card p-4">
+      <h3>Top products</h3>
+      <canvas id="chartTopProducts"></canvas>
+    </div>
+  </div>
+
+  <div class="mt-6 card p-4">
+    <h3>Recent activity</h3>
+    <ul>
+      {% for a in metrics.recent_activity %}
+        <li>{{ a.when }} - {{ a.detail }} {% if a.user %}by {{ a.user }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const salesData = {{ metrics.sales_last|safe }};
+const labels = salesData.map(x => x.date);
+const totals = salesData.map(x => Number(x.total || 0));
+const ctx = document.getElementById('chartSales').getContext('2d');
+new Chart(ctx, {type: 'line', data: {labels: labels, datasets: [{label: 'Sales', data: totals, borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)'}]}, options:{responsive:true}});
+
+const top = {{ metrics.top_products|safe }};
+const tlabels = top.map(x => x.code + ' ' + (x.description||''));
+const tdata = top.map(x => Number(x.qty || 0));
+const ctx2 = document.getElementById('chartTopProducts').getContext('2d');
+new Chart(ctx2, {type: 'bar', data: {labels: tlabels, datasets:[{label:'Qty', data:tdata, backgroundColor:'#111827'}]}, options:{responsive:true}});
+</script>
+
+<style>
+.card{background:#fff;padding:12px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.grid{display:grid}
+.grid-cols-4{grid-template-columns:repeat(4,1fr)}
+.grid-cols-2{grid-template-columns:repeat(2,1fr)}
+.gap-4{gap:1rem}.gap-6{gap:1.5rem}
+</style>
+
+{% endblock %}
