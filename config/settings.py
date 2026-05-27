@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "core",
     "users",
     "authentication",
+    "company",
+    "settings_app",
 ]
 
 MIDDLEWARE = [

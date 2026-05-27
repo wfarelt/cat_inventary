@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-4 rounded shadow">
+  {% if company %}
+    <h2 class="text-lg font-bold">{{ company.name }}</h2>
+    <p><strong>RUC:</strong> {{ company.ruc }}</p>
+    <p><strong>Dirección:</strong> {{ company.address }}</p>
+    <p><strong>Teléfono:</strong> {{ company.phone }}</p>
+  {% else %}
+    <p>No hay datos de la empresa. Ve a Admin → Empresas para crear una.</p>
+  {% endif %}
+</div>
+{% endblock %}
