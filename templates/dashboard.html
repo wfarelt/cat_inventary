@@ -1,125 +1,766 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - Caterpillar Inventory{% endblock %}
 
 {% block content %}
-<div class="p-4 bg-white rounded shadow">
-  <div class="flex items-center justify-between">
-    <h2 class="text-lg font-bold">Dashboard</h2>
-    <p class="text-sm">Bienvenido, {{ request.user.get_full_name|default:request.user.username }}</p>
-  </div>
-
-  <div class="grid grid-cols-3 gap-4 mt-4">
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Productos</div>
-      <div class="text-2xl font-bold">{{ product_count|default:0 }}</div>
-      <a href="{% url 'product_list' %}" class="text-xs text-blue-600">Ver productos</a>
-    </div>
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Categorías</div>
-      <div class="text-2xl font-bold">{{ category_count|default:0 }}</div>
-      <a href="#" class="text-xs text-blue-600">Ver categorías</a>
-    </div>
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Kits</div>
-      <div class="text-2xl font-bold">{{ kit_count|default:0 }}</div>
-      <a href="{% url 'kit_list' %}" class="text-xs text-blue-600">Ver kits</a>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-3 gap-4 mt-4">
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Productos con imagen</div>
-      <div class="text-2xl font-bold">{{ images_count|default:0 }}</div>
-      <a href="{% url 'product_list' %}?has_image=1" class="text-xs text-blue-600">Ver con imagen</a>
-    </div>
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Empresas</div>
-      <div class="text-2xl font-bold">{{ company_count|default:0 }}</div>
-      <a href="{% url 'company_list' %}" class="text-xs text-blue-600">Ver empresas</a>
-    </div>
-    <div class="p-3 bg-gray-50 rounded">
-      <div class="text-sm text-gray-600">Usuarios</div>
-      <div class="text-2xl font-bold">{{ user_count|default:0 }}</div>
-      <a href="{% url 'user_list' %}" class="text-xs text-blue-600">Ver usuarios</a>
-    </div>
-  </div>
-
-  <div class="mt-6">
-    <h3 class="font-semibold">Productos recientes</h3>
-    {% if recent_products %}
-      <table class="min-w-full mt-2 bg-white border-collapse border">
-        <thead>
-          <tr class="bg-gray-100"><th>Codigo</th><th>Descripción</th><th>Categoría</th><th></th></tr>
-        </thead>
-        <tbody>
-          {% for p in recent_products %}
-            <tr class="border-t">
-              <td class="px-2 py-1">{{ p.code }}</td>
-              <td class="px-2 py-1">{{ p.description }}</td>
-              <td class="px-2 py-1">{% if p.category %}{{ p.category.name }}{% endif %}</td>
-              <td class="px-2 py-1"><a href="{% url 'product_detail' p.pk %}" class="text-blue-600">Ver</a></td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="text-sm text-gray-600">No hay productos aún.</p>
-    {% endif %}
-  </div>
-
-  <div class="mt-6">
-    <h3 class="font-semibold">Kits recientes</h3>
-    {% if recent_kits %}
-      <ul class="mt-2">
-        {% for k in recent_kits %}
-          <li class="py-1 border-b flex justify-between items-center">
-            <div>
-              <div class="font-medium">{{ k.name }}</div>
-              <div class="text-xs text-gray-600">{{ k.description|truncatechars:80 }}</div>
+<div class="dashboard-container">
+    <!-- Welcome Section -->
+    <div class="welcome-section mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="welcome-title">
+                    <i class="fas fa-wave-hand" style="color: var(--cat-yellow);"></i>
+                    Bienvenido, <span class="username">{{ user.get_full_name|default:user.username }}</span>
+                </h1>
+                <p class="welcome-subtitle text-muted">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <span id="current-date"></span>
+                </p>
             </div>
-            <div><a href="{% url 'kit_detail' k.pk %}" class="text-blue-600 text-sm">Ver</a></div>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-sm text-gray-600">No hay kits aún.</p>
-    {% endif %}
-  </div>
-
-  <div class="mt-6 grid grid-cols-2 gap-4">
-    <div class="p-3 bg-white rounded shadow">
-      <h4 class="font-medium">Distribución por categoría</h4>
-      <canvas id="chartCategories" height="200"></canvas>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-refresh me-1"></i> Actualizar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-download me-1"></i> Exportar
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="p-3 bg-white rounded shadow">
-      <h4 class="font-medium">Productos añadidos (6 meses)</h4>
-      <canvas id="chartTrend" height="200"></canvas>
+
+    <!-- Stat Cards Row -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%);">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Ventas Hoy</p>
+                    <h3 class="stat-value">$45,231</h3>
+                    <small class="stat-change text-success">
+                        <i class="fas fa-arrow-up"></i> +12.5% vs ayer
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Compras Pendientes</p>
+                    <h3 class="stat-value">12</h3>
+                    <small class="stat-change text-warning">
+                        <i class="fas fa-clock"></i> 5 por confirmar
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%);">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Stock Bajo</p>
+                    <h3 class="stat-value">23</h3>
+                    <small class="stat-change text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Requiere atención
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-content">
+                    <p class="stat-label">Caja Disponible</p>
+                    <h3 class="stat-value">$18,450</h3>
+                    <small class="stat-change text-success">
+                        <i class="fas fa-arrow-up"></i> +$2,100 esta semana
+                    </small>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    fetch('{% url "dashboard_data" %}')
-      .then(r => r.json())
-      .then(data => {
-        const ctx1 = document.getElementById('chartCategories').getContext('2d');
-        new Chart(ctx1, {
-          type: 'pie',
-          data: {
-            labels: data.category_labels,
-            datasets: [{ data: data.category_counts, backgroundColor: ['#60A5FA','#34D399','#FBBF24','#F87171','#C084FC','#A78BFA'] }]
-          }
-        });
+    <!-- Main Content Row -->
+    <div class="row g-4 mb-4">
+        <!-- Módulos Principales -->
+        <div class="col-lg-8">
+            <div class="section-title mb-3">
+                <i class="fas fa-th-large me-2"></i>
+                Módulos Principales
+            </div>
+            <div class="row g-3">
+                <!-- Productos -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-header">
+                            <div class="module-icon" style="background-color: rgba(255, 204, 0, 0.1);">
+                                <i class="fas fa-box" style="color: var(--cat-yellow);"></i>
+                            </div>
+                            <h5 class="module-title">Productos</h5>
+                        </div>
+                        <div class="module-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Total en Catálogo</span>
+                                <span class="metric-value">247</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Activos Este Mes</span>
+                                <span class="metric-value">189</span>
+                            </div>
+                        </div>
+                        <div class="module-footer">
+                            <a href="{% url 'product_list' %}" class="btn btn-sm btn-link-primary">
+                                Ver Productos <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
-        const ctx2 = document.getElementById('chartTrend').getContext('2d');
-        new Chart(ctx2, {
-          type: 'line',
-          data: {
-            labels: data.trend_labels,
-            datasets: [{ label: 'Productos', data: data.trend_counts, borderColor: '#3B82F6', fill: false }]
-          },
-          options: { scales: { y: { beginAtZero: true } } }
-        });
-      });
-  </script>
+                <!-- Compras -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-header">
+                            <div class="module-icon" style="background-color: rgba(102, 126, 234, 0.1);">
+                                <i class="fas fa-shopping-cart" style="color: #667EEA;"></i>
+                            </div>
+                            <h5 class="module-title">Compras</h5>
+                        </div>
+                        <div class="module-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Órdenes Activas</span>
+                                <span class="metric-value">8</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Monto Total</span>
+                                <span class="metric-value">$127,450</span>
+                            </div>
+                        </div>
+                        <div class="module-footer">
+                            <a href="#" class="btn btn-sm btn-link-primary">
+                                Ver Compras <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ventas -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-header">
+                            <div class="module-icon" style="background-color: rgba(245, 87, 108, 0.1);">
+                                <i class="fas fa-cash-register" style="color: #F5576C;"></i>
+                            </div>
+                            <h5 class="module-title">Ventas</h5>
+                        </div>
+                        <div class="module-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Órdenes Hoy</span>
+                                <span class="metric-value">34</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Ingresos del Día</span>
+                                <span class="metric-value">$94,230</span>
+                            </div>
+                        </div>
+                        <div class="module-footer">
+                            <a href="#" class="btn btn-sm btn-link-primary">
+                                Ver Ventas <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventario -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-header">
+                            <div class="module-icon" style="background-color: rgba(79, 172, 254, 0.1);">
+                                <i class="fas fa-warehouse" style="color: #4FACFE;"></i>
+                            </div>
+                            <h5 class="module-title">Inventario</h5>
+                        </div>
+                        <div class="module-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Movimientos Hoy</span>
+                                <span class="metric-value">156</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Valor Total Stock</span>
+                                <span class="metric-value">$456,780</span>
+                            </div>
+                        </div>
+                        <div class="module-footer">
+                            <a href="#" class="btn btn-sm btn-link-primary">
+                                Ver Kardex <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Quick Actions & Info -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="section-title mb-3">
+                <i class="fas fa-lightning-bolt me-2"></i>
+                Acciones Rápidas
+            </div>
+            <div class="quick-actions mb-4">
+                <button class="quick-action-btn">
+                    <div class="quick-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <span>Nueva Venta</span>
+                </button>
+                <button class="quick-action-btn">
+                    <div class="quick-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <span>Nueva Compra</span>
+                </button>
+                <a href="{% url 'product_create' %}" class="quick-action-btn">
+                    <div class="quick-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <span>Nuevo Producto</span>
+                </a>
+                <button class="quick-action-btn">
+                    <div class="quick-icon">
+                        <i class="fas fa-bars-progress"></i>
+                    </div>
+                    <span>Movimiento Stock</span>
+                </button>
+            </div>
+
+            <!-- Info Card -->
+            <div class="info-card">
+                <div class="info-header">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Mi Información</span>
+                </div>
+                <div class="info-body">
+                    <div class="info-row">
+                        <span class="info-label">Usuario</span>
+                        <span class="info-value">{{ user.get_full_name|default:user.username }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Rol</span>
+                        <span class="info-value">
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-shield-alt me-1"></i>{{ user.get_role_display|default:"Sistema" }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">{{ user.email }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Última Actividad</span>
+                        <span class="info-value">Hace 2 minutos</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Badge -->
+            <div class="status-badge mt-4">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Sistema Operativo</span>
+                </div>
+                <p class="text-muted small">Todos los módulos funcionando correctamente</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="section-title mb-3">
+                <i class="fas fa-history me-2"></i>
+                Actividad Reciente
+            </div>
+            <div class="activity-card">
+                <div class="activity-item">
+                    <div class="activity-icon" style="background-color: rgba(255, 204, 0, 0.1);">
+                        <i class="fas fa-plus" style="color: var(--cat-yellow);"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Nueva venta registrada</p>
+                        <p class="activity-subtitle">Orden #ORD-2026-0451 - $2,450.00</p>
+                    </div>
+                    <div class="activity-time">Hace 5 min</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon" style="background-color: rgba(102, 126, 234, 0.1);">
+                        <i class="fas fa-check" style="color: #667EEA;"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Compra confirmada</p>
+                        <p class="activity-subtitle">Orden #PUR-2026-0124 - 50 unidades</p>
+                    </div>
+                    <div class="activity-time">Hace 1 hora</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon" style="background-color: rgba(245, 87, 108, 0.1);">
+                        <i class="fas fa-exclamation-triangle" style="color: #F5576C;"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Stock bajo detectado</p>
+                        <p class="activity-subtitle">Producto: "Rodillo Hydraulic" - 8 unidades disponibles</p>
+                    </div>
+                    <div class="activity-time">Hace 3 horas</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon" style="background-color: rgba(79, 172, 254, 0.1);">
+                        <i class="fas fa-edit" style="color: #4FACFE;"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Producto actualizado</p>
+                        <p class="activity-subtitle">Se actualizó el precio de "Piezas Motor Caterpillar"</p>
+                    </div>
+                    <div class="activity-time">Ayer a las 14:30</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    :root {
+        --cat-yellow: #FFCC00;
+        --cat-black: #1A1A1A;
+        --cat-gray-50: #F9FAFB;
+        --cat-gray-100: #F3F4F6;
+        --cat-gray-200: #E5E7EB;
+        --cat-gray-300: #D1D5DB;
+        --cat-gray-400: #9CA3AF;
+        --cat-gray-500: #6B7280;
+        --cat-gray-600: #4B5563;
+        --cat-gray-700: #374151;
+    }
+
+    .dashboard-container {
+        background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+        border-radius: 8px;
+        padding: 30px;
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+        background: white;
+        padding: 20px 25px;
+        border-radius: 8px;
+        border-left: 4px solid var(--cat-yellow);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .welcome-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--cat-black);
+        margin-bottom: 8px;
+    }
+
+    .username {
+        color: var(--cat-yellow);
+    }
+
+    .welcome-subtitle {
+        font-size: 14px;
+        margin-bottom: 0;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        gap: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 1px solid var(--cat-gray-200);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 28px;
+        flex-shrink: 0;
+    }
+
+    .stat-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: var(--cat-gray-500);
+        font-weight: 500;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--cat-black);
+        margin-bottom: 4px;
+    }
+
+    .stat-change {
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    /* Section Title */
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--cat-black);
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title i {
+        color: var(--cat-yellow);
+    }
+
+    /* Module Card */
+    .module-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--cat-gray-200);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .module-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .module-header {
+        padding: 20px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        border-bottom: 1px solid var(--cat-gray-100);
+    }
+
+    .module-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .module-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--cat-black);
+        margin-bottom: 0;
+    }
+
+    .module-body {
+        padding: 16px 20px;
+    }
+
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+
+    .metric-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .metric-label {
+        color: var(--cat-gray-600);
+        font-weight: 500;
+    }
+
+    .metric-value {
+        color: var(--cat-black);
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .module-footer {
+        padding: 12px 20px;
+        border-top: 1px solid var(--cat-gray-100);
+        background: var(--cat-gray-50);
+    }
+
+    .btn-link-primary {
+        color: var(--cat-yellow);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 13px;
+        padding: 0;
+    }
+
+    .btn-link-primary:hover {
+        color: #FFB800;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .quick-action-btn {
+        background: white;
+        border: 1px solid var(--cat-gray-200);
+        border-radius: 10px;
+        padding: 16px 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--cat-gray-700);
+        font-weight: 500;
+    }
+
+    .quick-action-btn:hover {
+        background: var(--cat-yellow);
+        border-color: var(--cat-yellow);
+        color: var(--cat-black);
+        transform: translateY(-2px);
+    }
+
+    .quick-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--cat-gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .quick-action-btn:hover .quick-icon {
+        background: rgba(26, 26, 26, 0.1);
+    }
+
+    /* Info Card */
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--cat-gray-200);
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .info-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--cat-gray-100);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--cat-black);
+        font-size: 14px;
+    }
+
+    .info-header i {
+        color: var(--cat-yellow);
+        font-size: 18px;
+    }
+
+    .info-body {
+        padding: 16px 20px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 13px;
+    }
+
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-label {
+        color: var(--cat-gray-600);
+        font-weight: 500;
+    }
+
+    .info-value {
+        color: var(--cat-black);
+        font-weight: 600;
+        text-align: right;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        border: 1px solid var(--cat-gray-200);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        color: var(--cat-black);
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #10B981;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Activity Section */
+    .activity-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--cat-gray-200);
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--cat-gray-100);
+        align-items: flex-start;
+        transition: background-color 0.2s;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-item:hover {
+        background-color: var(--cat-gray-50);
+    }
+
+    .activity-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--cat-black);
+        margin-bottom: 4px;
+    }
+
+    .activity-subtitle {
+        font-size: 12px;
+        color: var(--cat-gray-600);
+        margin-bottom: 0;
+    }
+
+    .activity-time {
+        font-size: 12px;
+        color: var(--cat-gray-500);
+        white-space: nowrap;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 15px;
+        }
+
+        .welcome-title {
+            font-size: 22px;
+        }
+
+        .stat-card {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+        }
+
+        .quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<script>
+    // Set current date
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    const currentDate = new Date().toLocaleDateString('es-ES', options);
+    document.getElementById('current-date').textContent = currentDate;
+</script>
 {% endblock %}

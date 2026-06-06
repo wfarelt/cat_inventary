@@ -15,7 +15,7 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f'Group {r} already exists')
 
-        # Example: assign basic permissions for User model to Administrator
+        # Example: assign basic permissions for User model and Brand/Products perms to Administrator
         try:
             ct = ContentType.objects.get(app_label='auth', model='user')
             perms = Permission.objects.filter(content_type=ct)
@@ -24,5 +24,14 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Assigned auth.User perms to Administrator'))
         except ContentType.DoesNotExist:
             self.stdout.write('auth.User content type not found; skipping permission assignment')
+
+        try:
+            products_ct = ContentType.objects.get(app_label='products')
+            brand_perms = Permission.objects.filter(content_type=products_ct, codename__in=['add_brand', 'change_brand', 'delete_brand', 'view_brand'])
+            admin = Group.objects.get(name='Administrator')
+            admin.permissions.add(*brand_perms)
+            self.stdout.write(self.style.SUCCESS('Assigned products.Brand perms to Administrator'))
+        except ContentType.DoesNotExist:
+            self.stdout.write('products content type not found; skipping brand permissions assignment')
 
         self.stdout.write(self.style.SUCCESS('Roles initialized'))

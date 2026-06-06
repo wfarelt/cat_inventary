@@ -40,6 +40,9 @@ def _role_for_user(user):
         return 'anonymous'
     if user.is_superuser:
         return 'administrator'
+    role = getattr(user, 'role', None)
+    if role in {'admin', 'sales', 'warehouse', 'accounting'}:
+        return role
     groups = {g.name.lower() for g in user.groups.all()}
     if 'sales' in groups:
         return 'sales'

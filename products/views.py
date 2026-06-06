@@ -6,8 +6,8 @@ from django.conf import settings
 from django.contrib.auth.decorators import permission_required, login_required
 from core.permissions import is_admin
 from django.http import JsonResponse
-from .models import Product, Category, ProductKit, ProductKitItem
-from .forms import ProductForm, CategoryForm, ProductKitForm, ProductKitItemForm
+from .models import Brand, Product, Category, ProductKit, ProductKitItem
+from .forms import ProductForm, BrandForm, CategoryForm, ProductKitForm, ProductKitItemForm
 from .services import search_products
 from . import api as api_views
 from django.db import transaction
@@ -19,6 +19,7 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.urls import reverse
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 
 
 
@@ -31,7 +32,7 @@ def product_list(request):
     page = int(request.GET.get('page', 1))
     per_page = int(request.GET.get('per_page', 25))
 
-    qs = Product.objects.select_related('category').all().order_by('code')
+    qs = Product.objects.select_related('category', 'brand_ref').all().order_by('code')
     if q:
         qs = qs.filter(Q(code__icontains=q) | Q(description__icontains=q))
     if category:
@@ -66,7 +67,7 @@ def product_create(request):
 
 @permission_required('products.view_product', raise_exception=True)
 def product_detail(request, pk):
-    p = get_object_or_404(Product.objects.select_related('category'), pk=pk)
+    p = get_object_or_404(Product.objects.select_related('category', 'brand_ref'), pk=pk)
     return render(request, 'products/detail.html', {'product': p})
 
 # expose api functions for urls import compatibility
@@ -77,7 +78,7 @@ api_product_import_preview = api_views.api_product_import_preview
 
 @permission_required('products.change_product', raise_exception=True)
 def product_edit(request, pk):
-    p = get_object_or_404(Product, pk=pk)
+    p = get_object_or_404(Product.objects.select_related('category', 'brand_ref'), pk=pk)
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=p)
         if form.is_valid():
@@ -86,6 +87,19 @@ def product_edit(request, pk):
     else:
         form = ProductForm(instance=p)
     return render(request, 'products/form.html', {'form': form, 'product': p})
+
+
+@permission_required('products.delete_product', raise_exception=True)
+def product_delete(request, pk):
+    product = get_object_or_404(Product.objects.select_related('category'), pk=pk)
+    if request.method == 'POST':
+        try:
+            product.delete()
+            messages.success(request, 'Producto eliminado.')
+            return redirect('product_list')
+        except ProtectedError:
+            messages.error(request, 'No se puede eliminar el producto porque está asociado a otros registros.')
+    return render(request, 'products/product_confirm_delete.html', {'product': product})
 
 
 @login_required
@@ -546,8 +560,11 @@ def image_unassign(request, pk):
 
 @permission_required('products.view_productkit', raise_exception=True)
 def kit_list(request):
+    q = request.GET.get('q', '').strip()
     qs = ProductKit.objects.all().order_by('name')
-    return render(request, 'products/kit_list.html', {'kits': qs})
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
+    return render(request, 'products/kit_list.html', {'kits': qs, 'q': q})
 
 
 @permission_required('products.add_productkit', raise_exception=True)
@@ -610,14 +627,27 @@ def kit_remove_item(request, pk, item_pk):
 
 @permission_required('products.view_category', raise_exception=True)
 def category_list(request):
-    q = request.GET.get('q', '')
+    q = request.GET.get('q', '').strip()
+    is_active = request.GET.get('is_active', '')
     page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    
     qs = Category.objects.all().order_by('name')
     if q:
-        qs = qs.filter(name__icontains=q)
-    paginator = Paginator(qs, 20)
+        qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
+    if is_active in ('1', 'true', 'yes'):
+        qs = qs.filter(is_active=True)
+    elif is_active in ('0', 'false', 'no'):
+        qs = qs.filter(is_active=False)
+    
+    paginator = Paginator(qs, per_page)
     pag = paginator.get_page(page)
-    return render(request, 'products/category_list.html', {'categories': pag, 'paginator': paginator, 'q': q})
+    return render(request, 'products/category_list.html', {
+        'categories': pag, 
+        'paginator': paginator, 
+        'q': q,
+        'is_active': is_active
+    })
 
 
 @permission_required('products.add_category', raise_exception=True)
@@ -670,6 +700,81 @@ def category_delete(request, pk):
 
     categories = Category.objects.exclude(pk=cat.pk).order_by('name')
     return render(request, 'products/category_confirm_delete.html', {'category': cat, 'categories': categories})
+
+
+@permission_required('products.view_brand', raise_exception=True)
+def brand_list(request):
+    q = request.GET.get('q', '').strip()
+    is_active = request.GET.get('is_active', '')
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+
+    qs = Brand.objects.all().order_by('name')
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
+    if is_active in ('1', 'true', 'yes'):
+        qs = qs.filter(is_active=True)
+    elif is_active in ('0', 'false', 'no'):
+        qs = qs.filter(is_active=False)
+
+    paginator = Paginator(qs, per_page)
+    pag = paginator.get_page(page)
+    return render(request, 'products/brand_list.html', {
+        'brands': pag,
+        'paginator': paginator,
+        'q': q,
+        'is_active': is_active,
+    })
+
+
+@permission_required('products.add_brand', raise_exception=True)
+def brand_create(request):
+    if request.method == 'POST':
+        form = BrandForm(request.POST)
+        if form.is_valid():
+            brand = form.save()
+            messages.success(request, 'Marca creada.')
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'id': brand.pk, 'name': brand.name})
+            return redirect('brand_list')
+    else:
+        form = BrandForm()
+    return render(request, 'products/brand_form.html', {'form': form})
+
+
+@permission_required('products.change_brand', raise_exception=True)
+def brand_edit(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        form = BrandForm(request.POST, instance=brand)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Marca actualizada.')
+            return redirect('brand_list')
+    else:
+        form = BrandForm(instance=brand)
+    return render(request, 'products/brand_form.html', {'form': form, 'brand': brand})
+
+
+@permission_required('products.delete_brand', raise_exception=True)
+def brand_delete(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        reassign_to = request.POST.get('reassign_to')
+        if reassign_to:
+            try:
+                other = Brand.objects.get(pk=int(reassign_to))
+                Product.objects.filter(brand_ref=brand).update(brand_ref=other, brand=other.name)
+            except Exception:
+                pass
+        else:
+            Product.objects.filter(brand_ref=brand).update(brand_ref=None)
+        brand.delete()
+        messages.success(request, 'Marca eliminada.')
+        return redirect('brand_list')
+
+    brands = Brand.objects.exclude(pk=brand.pk).order_by('name')
+    return render(request, 'products/brand_confirm_delete.html', {'brand': brand, 'brands': brands})
 
 
 @permission_required('products.change_product', raise_exception=True)

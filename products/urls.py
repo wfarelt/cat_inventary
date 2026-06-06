@@ -6,6 +6,7 @@ urlpatterns = [
     path('add/', views.product_create, name='product_create'),
     path('<int:pk>/', views.product_detail, name='product_detail'),
     path('<int:pk>/edit/', views.product_edit, name='product_edit'),
+    path('<int:pk>/delete/', views.product_delete, name='product_delete'),
     path('search/autocomplete/', views.product_autocomplete, name='product_autocomplete'),
     path('import/', views.product_import, name='product_import'),
     path('import/confirm/', views.product_import_confirm, name='product_import_confirm'),
@@ -23,6 +24,11 @@ urlpatterns = [
     path('categories/add/', views.category_create, name='category_create'),
     path('categories/<int:pk>/edit/', views.category_edit, name='category_edit'),
     path('categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
+    # Brands CRUD
+    path('brands/', views.brand_list, name='brand_list'),
+    path('brands/add/', views.brand_create, name='brand_create'),
+    path('brands/<int:pk>/edit/', views.brand_edit, name='brand_edit'),
+    path('brands/<int:pk>/delete/', views.brand_delete, name='brand_delete'),
     # API
     path('api/products/', views.api_product_list, name='api_product_list'),
     path('api/products/<int:pk>/', views.api_product_detail, name='api_product_detail'),

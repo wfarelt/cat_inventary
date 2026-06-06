@@ -1,28 +1,356 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Kits - Caterpillar Inventory{% endblock %}
 
 {% block content %}
-<div class="p-4 bg-white rounded shadow">
-  <div class="flex items-center justify-between">
-    <h2 class="text-lg font-bold">Kits de Producto</h2>
-    <a href="{% url 'kit_create' %}" class="bg-blue-600 text-white px-3 py-1 rounded">Nuevo Kit</a>
-  </div>
-  <table class="min-w-full mt-4 bg-white border-collapse border">
-    <thead><tr class="bg-gray-100"><th>Nombre</th><th>Items</th><th>Activo</th><th></th></tr></thead>
-    <tbody>
-      {% for k in kits %}
-        <tr class="border-t">
-          <td class="px-2 py-1 font-medium">{{ k.name }}</td>
-          <td class="px-2 py-1">{{ k.items.count }}</td>
-          <td class="px-2 py-1">{% if k.is_active %}<span class="text-green-600">Sí</span>{% else %}<span class="text-gray-500">No</span>{% endif %}</td>
-          <td class="px-2 py-1">
-            <a href="{% url 'kit_detail' k.pk %}" class="bg-gray-100 px-2 py-1 rounded text-sm">Ver</a>
-            <a href="{% url 'kit_edit' k.pk %}" class="ml-2 bg-yellow-100 px-2 py-1 rounded text-sm">Editar</a>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="3">No hay kits.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="products-container">
+	<!-- Header Section -->
+	<div class="section-header mb-4">
+		<div class="row align-items-center">
+			<div class="col-md-6">
+				<div class="section-title-large">
+					<i class="fas fa-boxes-stacked"></i>
+					Kits de Productos
+				</div>
+				<p class="section-subtitle">Gestiona los kits de tu catálogo</p>
+			</div>
+			<div class="col-md-6 text-md-end">
+				{% if perms.products.add_productkit %}
+					<a href="{% url 'kit_create' %}" class="btn btn-primary">
+						<i class="fas fa-plus me-2"></i> Nuevo Kit
+					</a>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<!-- Filters Section -->
+	<div class="filters-card mb-4">
+		<form method="get">
+			<div class="row g-3 align-items-center">
+				<div class="col-md-8">
+					<div class="search-box">
+						<i class="fas fa-search"></i>
+						<input
+							type="text"
+							name="q"
+							class="form-control"
+							placeholder="Buscar por nombre o descripción..."
+							value="{{ q }}"
+						>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<button type="submit" class="btn btn-outline-secondary w-100">
+						<i class="fas fa-sliders-h me-1"></i> Filtrar
+					</button>
+				</div>
+			</div>
+		</form>
+	</div>
+
+	<!-- Kits Table -->
+	<div class="products-card">
+		<div class="table-responsive">
+			<table class="table table-hover mb-0">
+				<thead class="table-header">
+					<tr>
+						<th style="width: 28%;">Nombre</th>
+						<th style="width: 12%;" class="text-center">Items</th>
+						<th style="width: 40%;">Descripción</th>
+						<th style="width: 10%;" class="text-center">Estado</th>
+						<th style="width: 10%;" class="text-center">Acciones</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for kit in kits %}
+					<tr class="product-row" data-kit-id="{{ kit.id }}">
+						<td>
+							<div class="product-code">
+								<span class="code-badge">{{ kit.name }}</span>
+							</div>
+						</td>
+						<td class="text-center">
+							<span class="stock-badge stock-available">{{ kit.items.count }}</span>
+						</td>
+						<td>
+							<div class="product-details-cell text-muted">
+								{{ kit.description|default:"Sin descripción" }}
+							</div>
+						</td>
+						<td class="text-center">
+							{% if kit.is_active %}
+								<span class="badge bg-success">
+									<i class="fas fa-check-circle me-1"></i> Activo
+								</span>
+							{% else %}
+								<span class="badge bg-secondary">
+									<i class="fas fa-times-circle me-1"></i> Inactivo
+								</span>
+							{% endif %}
+						</td>
+						<td>
+							<div class="actions-cell">
+								{% if perms.products.view_productkit %}
+									<a href="{% url 'kit_detail' kit.id %}" class="btn btn-sm btn-action btn-view" title="Ver">
+										<i class="fas fa-eye"></i>
+									</a>
+								{% endif %}
+								{% if perms.products.change_productkit %}
+									<a href="{% url 'kit_edit' kit.id %}" class="btn btn-sm btn-action btn-edit" title="Editar">
+										<i class="fas fa-edit"></i>
+									</a>
+								{% endif %}
+							</div>
+						</td>
+					</tr>
+					{% empty %}
+					<tr>
+						<td colspan="5" class="text-center py-5">
+							<div class="empty-state">
+								<i class="fas fa-inbox"></i>
+								<p>No hay kits registrados</p>
+								{% if perms.products.add_productkit %}
+									<a href="{% url 'kit_create' %}" class="btn btn-sm btn-primary mt-2">
+										<i class="fas fa-plus me-1"></i> Crear Kit
+									</a>
+								{% endif %}
+							</div>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
 </div>
+
+<style>
+	.products-container {
+		background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+		border-radius: 8px;
+		padding: 30px;
+	}
+
+	.section-header {
+		background: white;
+		padding: 20px 25px;
+		border-radius: 8px;
+		border-left: 4px solid var(--cat-yellow);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+	}
+
+	.section-title-large {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--cat-black);
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 4px;
+	}
+
+	.section-title-large i {
+		color: var(--cat-yellow);
+	}
+
+	.section-subtitle {
+		font-size: 14px;
+		color: var(--cat-gray-500);
+		margin-bottom: 0;
+	}
+
+	.filters-card {
+		background: white;
+		padding: 16px 20px;
+		border-radius: 8px;
+		border: 1px solid var(--cat-gray-200);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+	}
+
+	.search-box {
+		position: relative;
+	}
+
+	.search-box i {
+		position: absolute;
+		left: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--cat-gray-400);
+		font-size: 14px;
+	}
+
+	.search-box .form-control {
+		padding-left: 36px;
+		border-color: var(--cat-gray-200);
+		border-radius: 6px;
+		font-size: 14px;
+	}
+
+	.search-box .form-control:focus,
+	.form-select:focus {
+		border-color: var(--cat-yellow);
+		box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.1);
+	}
+
+	.products-card {
+		background: white;
+		border-radius: 8px;
+		border: 1px solid var(--cat-gray-200);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+		overflow: hidden;
+	}
+
+	.table {
+		font-size: 14px;
+	}
+
+	.table-header {
+		background: var(--cat-gray-50);
+		border-bottom: 1px solid var(--cat-gray-200);
+	}
+
+	.table-header th {
+		font-weight: 600;
+		color: var(--cat-gray-700);
+		padding: 12px 16px;
+		text-transform: uppercase;
+		font-size: 12px;
+		letter-spacing: 0.5px;
+		border: none;
+	}
+
+	.product-row {
+		border-bottom: 1px solid var(--cat-gray-100);
+		transition: background-color 0.2s;
+	}
+
+	.product-row:hover {
+		background-color: var(--cat-gray-50);
+	}
+
+	.product-row td {
+		padding: 12px 16px;
+		vertical-align: middle;
+	}
+
+	.product-code {
+		display: flex;
+		align-items: center;
+	}
+
+	.code-badge {
+		background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%);
+		color: #1A1A1A;
+		padding: 6px 10px;
+		border-radius: 6px;
+		font-weight: 600;
+		font-size: 12px;
+	}
+
+	.stock-badge {
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-weight: 600;
+		font-size: 12px;
+	}
+
+	.stock-available {
+		background: rgba(16, 185, 129, 0.1);
+		color: #059669;
+	}
+
+	.product-details-cell {
+		font-size: 13px;
+		max-width: 420px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.actions-cell {
+		display: flex;
+		gap: 6px;
+		justify-content: center;
+	}
+
+	.btn-action {
+		background: var(--cat-gray-100);
+		color: var(--cat-gray-700);
+		border: none;
+		border-radius: 4px;
+		padding: 6px 8px;
+		font-size: 12px;
+		transition: all 0.2s;
+	}
+
+	.btn-action:hover {
+		background: var(--cat-yellow);
+		color: var(--cat-black);
+	}
+
+	.btn-view:hover {
+		background: rgba(79, 172, 254, 0.2);
+		color: #4FACFE;
+	}
+
+	.btn-edit:hover {
+		background: rgba(102, 126, 234, 0.2);
+		color: #667EEA;
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: 40px 20px;
+	}
+
+	.empty-state i {
+		font-size: 48px;
+		color: var(--cat-gray-300);
+		margin-bottom: 16px;
+	}
+
+	.empty-state p {
+		color: var(--cat-gray-600);
+		margin-bottom: 0;
+	}
+
+	@media (max-width: 768px) {
+		.products-container {
+			padding: 15px;
+		}
+
+		.section-header {
+			padding: 15px;
+		}
+
+		.section-title-large {
+			font-size: 18px;
+		}
+
+		.filters-card {
+			padding: 12px 15px;
+		}
+
+		.table {
+			font-size: 12px;
+		}
+
+		.product-details-cell {
+			max-width: 140px;
+		}
+
+		.actions-cell {
+			gap: 4px;
+		}
+
+		.btn-action {
+			padding: 4px 6px;
+			font-size: 10px;
+		}
+	}
+</style>
 {% endblock %}
+

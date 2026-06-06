@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Eliminar Marca - Caterpillar Inventory{% endblock %}
+
+{% block content %}
+<div class="categories-container">
+    <div class="section-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="section-title-large">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Eliminar Marca
+                </div>
+                <p class="section-subtitle">Confirma la acción antes de continuar</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <a href="{% url 'brand_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Volver a Marcas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="products-card">
+        <div class="form-section">
+            <div class="alert alert-warning mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Marca a eliminar:</strong> {{ brand.name }}
+            </div>
+
+            {% if brand.products.count > 0 %}
+                <h5 class="section-heading"><i class="fas fa-boxes"></i> Productos Asociados</h5>
+                <p class="text-muted mb-3">
+                    Esta marca tiene <strong>{{ brand.products.count }}</strong> producto(s) asociado(s).
+                </p>
+
+                <div class="products-list mb-4">
+                    {% for product in brand.products.all|slice:":10" %}
+                        <div class="product-item">
+                            <i class="fas fa-box text-muted"></i>
+                            <span>{{ product.code }} - {{ product.description|truncatewords:5 }}</span>
+                        </div>
+                    {% endfor %}
+                    {% if brand.products.count > 10 %}
+                        <div class="text-muted small mt-2">... y {{ brand.products.count|add:"-10" }} producto(s) más</div>
+                    {% endif %}
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Opción recomendada:</strong> Reasigna los productos a otra marca antes de eliminar.
+                </div>
+
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="reassign_to" class="form-label">Reasignar productos a:</label>
+                            <select name="reassign_to" id="reassign_to" class="form-select">
+                                <option value="">-- Dejar sin marca --</option>
+                                {% for b in brands %}
+                                    <option value="{{ b.pk }}">{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text">Selecciona una marca para trasladar automáticamente todos los productos</small>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-trash me-2"></i> Eliminar Marca
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'brand_list' %}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-times me-2"></i> Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <h5 class="section-heading"><i class="fas fa-check-circle"></i> Sin Productos Asociados</h5>
+                <p class="text-muted mb-4">Esta marca no tiene productos asociados. Puedes eliminarla sin preocupaciones.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-trash me-2"></i> Sí, Eliminar Marca
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'brand_list' %}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-times me-2"></i> No, Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .categories-container { background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%); border-radius: 8px; padding: 30px; max-width: 900px; margin: 0 auto; }
+    .section-header { background: white; padding: 20px 25px; border-radius: 8px; border-left: 4px solid var(--cat-yellow); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .section-title-large { font-size: 24px; font-weight: 700; color: var(--cat-black); display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .section-title-large i { color: #dc3545; }
+    .section-subtitle { font-size: 14px; color: var(--cat-gray-500); margin-bottom: 0; }
+    .products-card { background: white; border-radius: 8px; border: 1px solid var(--cat-gray-200); box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+    .form-section { padding: 20px 25px; }
+    .section-heading { font-size: 16px; font-weight: 600; color: var(--cat-black); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--cat-yellow); }
+    .section-heading i { color: var(--cat-yellow); margin-right: 8px; }
+    .products-list { background-color: var(--cat-gray-50); border-left: 4px solid var(--cat-gray-300); padding: 15px; border-radius: 4px; max-height: 220px; overflow-y: auto; }
+    .product-item { padding: 8px 0; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+    .product-item i { min-width: 16px; }
+    .form-label { font-weight: 600; color: var(--cat-black); margin-bottom: 8px; display: block; }
+    .form-select { border: 1px solid var(--cat-gray-300); border-radius: 6px; padding: 10px 12px; font-size: 14px; background: white; }
+    .form-select:focus { border-color: var(--cat-yellow); box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.1); }
+    .form-text { font-size: 13px; color: var(--cat-gray-500); margin-top: 6px; display: block; }
+    .alert { border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+    .alert-warning { background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; }
+    .alert-info { background-color: #d1ecf1; border: 1px solid #17a2b8; color: #0c5460; }
+    .btn { font-weight: 600; border: none; border-radius: 4px; padding: 10px 20px; font-size: 14px; transition: all 0.2s; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25); }
+    .btn-outline-secondary { border: 1px solid var(--cat-gray-300); color: var(--cat-gray-700); background: white; }
+    .btn-outline-secondary:hover { background-color: var(--cat-gray-100); border-color: var(--cat-gray-400); color: var(--cat-black); }
+    @media (max-width: 768px) { .categories-container { padding: 15px; } .section-header { padding: 15px; } .section-title-large { font-size: 18px; } .form-section { padding: 16px 15px; } }
+</style>
+{% endblock %}

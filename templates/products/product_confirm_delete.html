@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Eliminar Producto - Caterpillar Inventory{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="delete-header mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="delete-title">
+                    <i class="fas fa-exclamation-triangle"></i> Eliminar Producto
+                </div>
+                <p class="delete-subtitle">Confirma la acción antes de continuar</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="delete-wrapper">
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Producto a eliminar:</strong> <span class="fw-bold">{{ product.code }} - {{ product.description }}</span>
+        </div>
+
+        {% if product.image %}
+            <div class="mb-4 text-center">
+                <img src="{{ product.image.url }}" alt="{{ product.description }}" class="product-preview">
+            </div>
+        {% endif %}
+
+        <p class="text-muted mb-4">
+            Esta acción eliminará permanentemente el producto del catálogo.
+            Si el producto está referenciado en otros registros, la eliminación puede estar bloqueada.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-trash me-2"></i> Sí, Eliminar Producto
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <a href="{% url 'product_detail' product.pk %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-times me-2"></i> Cancelar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .delete-container {
+        max-width: 640px;
+        margin: 30px auto;
+        padding: 0 15px;
+    }
+
+    .delete-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--cat-black);
+        margin-bottom: 8px;
+    }
+
+    .delete-title i {
+        color: #dc3545;
+        margin-right: 10px;
+    }
+
+    .delete-subtitle {
+        font-size: 14px;
+        color: var(--cat-gray-600);
+        margin: 0;
+    }
+
+    .delete-wrapper {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+    }
+
+    .product-preview {
+        max-width: 220px;
+        border-radius: 8px;
+        border: 1px solid var(--cat-gray-200);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .alert {
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .alert-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        color: #856404;
+    }
+
+    .btn {
+        font-weight: 600;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-outline-secondary {
+        border: 1px solid var(--cat-gray-300);
+        color: var(--cat-gray-700);
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: var(--cat-gray-100);
+        border-color: var(--cat-gray-400);
+    }
+</style>
+{% endblock %}

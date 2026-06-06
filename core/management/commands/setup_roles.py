@@ -11,6 +11,7 @@ class Command(BaseCommand):
             'Admin': [
                 ('products', 'product', ['add', 'change', 'delete', 'view']),
                 ('products', 'category', ['add', 'change', 'delete', 'view']),
+                ('products', 'brand', ['add', 'change', 'delete', 'view']),
                 ('products', 'productkit', ['add', 'change', 'delete', 'view']),
                 ('company', 'company', ['add', 'change', 'delete', 'view']),
                 ('auth', 'user', ['add', 'change', 'delete', 'view']),
@@ -18,16 +19,19 @@ class Command(BaseCommand):
             'Manager': [
                 ('products', 'product', ['add', 'change', 'view']),
                 ('products', 'category', ['add', 'change', 'view']),
+                ('products', 'brand', ['add', 'change', 'view']),
                 ('products', 'productkit', ['add', 'change', 'view']),
                 ('company', 'company', ['view', 'change']),
             ],
             'Clerk': [
                 ('products', 'product', ['add', 'change', 'view']),
+                ('products', 'brand', ['view']),
                 ('products', 'productkit', ['view']),
             ],
             'Viewer': [
                 ('products', 'product', ['view']),
                 ('products', 'category', ['view']),
+                ('products', 'brand', ['view']),
                 ('products', 'productkit', ['view']),
                 ('company', 'company', ['view']),
             ],

@@ -33,6 +33,15 @@ This document describes recommended roles, groups and permission mappings for Ca
   - products.productkit: view
   - company.company: view
 
+## User role mapping
+
+- `admin` -> `Admin`
+- `sales` -> `Clerk`
+- `accounting` -> `Viewer`
+- `warehouse` -> `Manager`
+
+Assign users to these groups so Django permissions and the UI stay aligned with the role field.
+
 ## How to apply
 1. Run the management command to create groups and assign permissions:
 

@@ -1,15 +1,287 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if kit %}Editar Kit{% else %}Nuevo Kit{% endif %} - Caterpillar Inventory{% endblock %}
 
 {% block content %}
-<div class="p-4 bg-white rounded shadow">
-  {% if kit %}<h2 class="text-lg font-bold">Editar Kit</h2>{% else %}<h2 class="text-lg font-bold">Nuevo Kit</h2>{% endif %}
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <div class="mt-2">
-      <button class="bg-blue-600 text-white px-3 py-1 rounded">Guardar</button>
-      <a href="{% url 'kit_list' %}" class="ml-2">Cancelar</a>
-    </div>
-  </form>
+<div class="categories-container">
+	<!-- Header Section -->
+	<div class="section-header mb-4">
+		<div class="row align-items-center">
+			<div class="col-md-6">
+				<div class="section-title-large">
+					<i class="fas fa-boxes-stacked"></i>
+					{% if kit %}Editar Kit{% else %}Nuevo Kit{% endif %}
+				</div>
+				<p class="section-subtitle">
+					{% if kit %}
+						Actualiza los datos del kit
+					{% else %}
+						Crea un nuevo kit de productos
+					{% endif %}
+				</p>
+			</div>
+			<div class="col-md-6 text-md-end">
+				<a href="{% url 'kit_list' %}" class="btn btn-outline-secondary">
+					<i class="fas fa-arrow-left me-2"></i> Volver a Kits
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="products-card">
+		<form method="post">
+			{% csrf_token %}
+
+			<div class="form-section">
+				<h5 class="section-heading">
+					<i class="fas fa-info-circle"></i> Información Básica
+				</h5>
+
+				<div class="row g-3">
+					<div class="col-12">
+						<label for="id_name" class="form-label">Nombre del Kit *</label>
+						{{ form.name }}
+						{% if form.name.errors %}<span class="form-error">{{ form.name.errors.0 }}</span>{% endif %}
+						<small class="form-text">Máximo 200 caracteres</small>
+					</div>
+					<div class="col-12">
+						<label for="id_description" class="form-label">Descripción</label>
+						{{ form.description }}
+						{% if form.description.errors %}<span class="form-error">{{ form.description.errors.0 }}</span>{% endif %}
+						<small class="form-text">Describe el propósito o uso de este kit</small>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section border-top">
+				<h5 class="section-heading">
+					<i class="fas fa-toggle-on"></i> Estado
+				</h5>
+
+				<div class="category-switch">
+					<div class="form-check form-switch category-switch-row">
+						{{ form.is_active }}
+						<label for="id_is_active" class="form-check-label">Kit activo</label>
+					</div>
+					<small class="form-text">Los kits inactivos no aparecerán en los listados de selección</small>
+				</div>
+			</div>
+
+			<div class="form-section border-top">
+				<div class="row g-3">
+					<div class="col-md-6">
+						<button type="submit" class="btn btn-primary w-100">
+							<i class="fas fa-save me-2"></i>
+							{% if kit %}Actualizar{% else %}Crear{% endif %} Kit
+						</button>
+					</div>
+					<div class="col-md-6">
+						<a href="{% url 'kit_list' %}" class="btn btn-outline-secondary w-100">
+							<i class="fas fa-times me-2"></i> Cancelar
+						</a>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
 </div>
+
+<style>
+	.categories-container {
+		background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+		border-radius: 8px;
+		padding: 30px;
+		max-width: 900px;
+		margin: 0 auto;
+	}
+
+	.section-header {
+		background: white;
+		padding: 20px 25px;
+		border-radius: 8px;
+		border-left: 4px solid var(--cat-yellow);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+	}
+
+	.section-title-large {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--cat-black);
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 4px;
+	}
+
+	.section-title-large i {
+		color: var(--cat-yellow);
+	}
+
+	.section-subtitle {
+		font-size: 14px;
+		color: var(--cat-gray-500);
+		margin-bottom: 0;
+	}
+
+	.products-card {
+		background: white;
+		border-radius: 8px;
+		border: 1px solid var(--cat-gray-200);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+		overflow: hidden;
+	}
+
+	.form-section {
+		padding: 20px 25px;
+	}
+
+	.section-heading {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--cat-black);
+		margin-bottom: 18px;
+		padding-bottom: 10px;
+		border-bottom: 2px solid var(--cat-yellow);
+	}
+
+	.section-heading i {
+		color: var(--cat-yellow);
+		margin-right: 8px;
+	}
+
+	.form-label {
+		font-weight: 600;
+		color: var(--cat-black);
+		margin-bottom: 8px;
+		display: block;
+	}
+
+	input[type="text"],
+	textarea,
+	select {
+		display: block;
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--cat-gray-300);
+		border-radius: 6px;
+		font-size: 14px;
+		color: var(--cat-black);
+		font-family: 'Inter', sans-serif;
+		transition: border-color 0.2s, box-shadow 0.2s;
+		background: white;
+	}
+
+	input[type="text"]:focus,
+	textarea:focus,
+	select:focus {
+		outline: none;
+		border-color: var(--cat-yellow);
+		box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.1);
+	}
+
+	textarea {
+		resize: vertical;
+		min-height: 120px;
+	}
+
+	.form-text {
+		font-size: 13px;
+		color: var(--cat-gray-500);
+		margin-top: 6px;
+	}
+
+	.form-error {
+		display: block;
+		color: #dc3545;
+		font-size: 13px;
+		margin-top: 6px;
+		font-weight: 500;
+	}
+
+	.category-switch {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		max-width: 100%;
+		padding-top: 4px;
+	}
+
+	.category-switch-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: nowrap;
+		min-height: 2.4rem;
+		padding-left: 0;
+		margin: 0;
+	}
+
+	.form-check-input {
+		width: 2.5rem;
+		height: 1.35rem;
+		margin-top: 0;
+		cursor: pointer;
+		accent-color: var(--cat-yellow);
+		flex: 0 0 auto;
+	}
+
+	.form-check-label {
+		margin-left: 0;
+		cursor: pointer;
+		font-weight: 500;
+		color: var(--cat-black);
+		line-height: 1.2;
+	}
+
+	.btn {
+		font-weight: 600;
+		border: none;
+		border-radius: 4px;
+		padding: 10px 20px;
+		font-size: 14px;
+		transition: all 0.2s;
+	}
+
+	.btn-primary {
+		background: var(--cat-yellow);
+		color: var(--cat-black);
+	}
+
+	.btn-primary:hover {
+		background: #e6b800;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(255, 204, 0, 0.25);
+	}
+
+	.btn-outline-secondary {
+		border: 1px solid var(--cat-gray-300);
+		color: var(--cat-gray-700);
+		background: white;
+	}
+
+	.btn-outline-secondary:hover {
+		background-color: var(--cat-gray-100);
+		border-color: var(--cat-gray-400);
+		color: var(--cat-black);
+	}
+
+	@media (max-width: 768px) {
+		.categories-container {
+			padding: 15px;
+		}
+
+		.section-header {
+			padding: 15px;
+		}
+
+		.section-title-large {
+			font-size: 18px;
+		}
+
+		.form-section {
+			padding: 16px 15px;
+		}
+	}
+</style>
 {% endblock %}

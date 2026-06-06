@@ -1,13 +1,521 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ product.code }} - Caterpillar Inventory{% endblock %}
 
 {% block content %}
-<div class="bg-white p-4 rounded shadow">
-  <h2 class="text-lg font-bold">{{ product.code }} - {{ product.description }}</h2>
-  <p><strong>Categoría:</strong> {% if product.category %}{{ product.category.name }}{% else %}-{% endif %}</p>
-  <p><strong>Marca:</strong> {{ product.brand }}</p>
-  <p><strong>Precio:</strong> {{ product.price }}</p>
-  <p><strong>Stock:</strong> {{ product.stock }} (Disponible: {{ product.available_stock }})</p>
-  <p><strong>Ubicación:</strong> {{ product.location }}</p>
-  <p><strong>Notas:</strong> {{ product.notes }}</p>
+<div class="detail-container">
+    <!-- Header -->
+    <div class="detail-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="detail-title">
+                    <i class="fas fa-box"></i>
+                    {{ product.code }}
+                </div>
+                <p class="detail-subtitle">{{ product.description }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'product_edit' product.pk %}" class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-edit me-1"></i> Editar
+                </a>
+                <a href="{% url 'product_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Product Image -->
+            {% if product.image %}
+            <div class="detail-card mb-4">
+                <div class="product-image-container">
+                    <img src="{{ product.image.url }}" alt="{{ product.description }}" class="product-image">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basic Info -->
+            <div class="detail-card mb-4">
+                <h5 class="card-section-title">
+                    <i class="fas fa-info-circle"></i> Información Básica
+                </h5>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Código</span>
+                        <span class="info-value code-badge">{{ product.code }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Marca</span>
+                        <span class="info-value">{{ product.brand_ref.name|default:product.brand|default:"Sin marca" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Categoría</span>
+                        <span class="info-value">
+                            {% if product.category %}
+                                <span class="badge bg-light text-dark">{{ product.category.name }}</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted">Sin categoría</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ubicación</span>
+                        <span class="info-value">{{ product.location|default:"No especificada" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="detail-card mb-4">
+                <h5 class="card-section-title">
+                    <i class="fas fa-dollar-sign"></i> Precios
+                </h5>
+                <div class="price-grid">
+                    <div class="price-item">
+                        <div class="price-label">Costo Unitario</div>
+                        <div class="price-value">${{ product.cost|default:"0.00" }}</div>
+                    </div>
+                    <div class="price-item">
+                        <div class="price-label">Precio Venta</div>
+                        <div class="price-value">${{ product.price|default:"0.00" }}</div>
+                    </div>
+                    {% if product.cost and product.price %}
+                    <div class="price-item">
+                        <div class="price-label">Margen</div>
+                        <div class="price-value margin">
+                            {{ product.price|add:product.cost|stringformat:"d" }}%
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stock Status -->
+            <div class="detail-card">
+                <h5 class="card-section-title">
+                    <i class="fas fa-warehouse"></i> Gestión de Stock
+                </h5>
+                <div class="stock-grid">
+                    <div class="stock-item">
+                        <div class="stock-label">Stock Actual</div>
+                        <div class="stock-value">{{ product.stock }}</div>
+                    </div>
+                    <div class="stock-item">
+                        <div class="stock-label">Stock Reservado</div>
+                        <div class="stock-value">{{ product.stock_reserved }}</div>
+                    </div>
+                    <div class="stock-item">
+                        <div class="stock-label">Stock Disponible</div>
+                        <div class="stock-value available">{{ product.available_stock }}</div>
+                    </div>
+                    <div class="stock-item">
+                        <div class="stock-label">Stock Mínimo</div>
+                        <div class="stock-value">{{ product.stock_min }}</div>
+                    </div>
+                </div>
+                <div class="stock-alert mt-3">
+                    {% if product.available_stock <= 0 %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Sin stock disponible
+                        </div>
+                    {% elif product.available_stock <= product.stock_min %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Stock por debajo del mínimo
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Stock disponible
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Status Card -->
+            <div class="detail-card mb-4">
+                <h5 class="card-section-title">
+                    <i class="fas fa-toggle-on"></i> Estado
+                </h5>
+                {% if product.is_active %}
+                    <span class="badge bg-success" style="font-size: 14px; padding: 8px 12px;">
+                        <i class="fas fa-check-circle me-1"></i> Activo
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary" style="font-size: 14px; padding: 8px 12px;">
+                        <i class="fas fa-times-circle me-1"></i> Inactivo
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- Meta Information -->
+            <div class="detail-card mb-4">
+                <h5 class="card-section-title">
+                    <i class="fas fa-history"></i> Información
+                </h5>
+                <div class="meta-info">
+                    <div class="meta-item">
+                        <span class="meta-label">Creado</span>
+                        <span class="meta-value">{{ product.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Actualizado</span>
+                        <span class="meta-value">{{ product.updated_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="detail-card">
+                <h5 class="card-section-title">
+                    <i class="fas fa-lightning-bolt"></i> Acciones
+                </h5>
+                <div class="quick-actions-list">
+                    <a href="{% url 'product_edit' product.pk %}" class="quick-action-link">
+                        <i class="fas fa-edit me-2"></i> Editar Producto
+                    </a>
+                    <button type="button" class="quick-action-link">
+                        <i class="fas fa-plus me-2"></i> Ajustar Stock
+                    </button>
+                    <button type="button" class="quick-action-link">
+                        <i class="fas fa-history me-2"></i> Ver Historial
+                    </button>
+                    <a href="{% url 'product_delete' product.pk %}" class="quick-action-link delete">
+                        <i class="fas fa-trash me-2"></i> Eliminar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Section -->
+    {% if product.notes %}
+    <div class="detail-card mt-4">
+        <h5 class="card-section-title">
+            <i class="fas fa-sticky-note"></i> Notas
+        </h5>
+        <p class="notes-text">{{ product.notes }}</p>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+    :root {
+        --cat-yellow: #FFCC00;
+        --cat-black: #1A1A1A;
+        --cat-gray-50: #F9FAFB;
+        --cat-gray-100: #F3F4F6;
+        --cat-gray-200: #E5E7EB;
+        --cat-gray-300: #D1D5DB;
+        --cat-gray-400: #9CA3AF;
+        --cat-gray-500: #6B7280;
+        --cat-gray-600: #4B5563;
+        --cat-gray-700: #374151;
+    }
+
+    .detail-container {
+        background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+        border-radius: 8px;
+        padding: 30px;
+    }
+
+    /* Header */
+    .detail-header {
+        background: white;
+        padding: 20px 25px;
+        border-radius: 8px;
+        border-left: 4px solid var(--cat-yellow);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .detail-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--cat-black);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+    }
+
+    .detail-title i {
+        color: var(--cat-yellow);
+    }
+
+    .detail-subtitle {
+        font-size: 14px;
+        color: var(--cat-gray-500);
+        margin-bottom: 0;
+    }
+
+    /* Detail Card */
+    .detail-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid var(--cat-gray-200);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card-section-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--cat-black);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        margin-top: 0;
+    }
+
+    .card-section-title i {
+        color: var(--cat-yellow);
+    }
+
+    /* Product Image */
+    .product-image-container {
+        text-align: center;
+        overflow: hidden;
+        border-radius: 8px;
+        background: var(--cat-gray-100);
+    }
+
+    .product-image {
+        max-width: 100%;
+        max-height: 400px;
+        display: inline-block;
+        margin: 20px;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--cat-gray-600);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--cat-black);
+    }
+
+    .code-badge {
+        background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%);
+        color: #1A1A1A;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+        display: inline-block;
+        width: fit-content;
+    }
+
+    /* Price Grid */
+    .price-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+    }
+
+    .price-item {
+        padding: 16px;
+        background: var(--cat-gray-50);
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .price-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--cat-gray-600);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+
+    .price-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--cat-black);
+    }
+
+    .price-value.margin {
+        color: #059669;
+    }
+
+    /* Stock Grid */
+    .stock-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .stock-item {
+        padding: 12px;
+        background: var(--cat-gray-50);
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .stock-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--cat-gray-600);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        letter-spacing: 0.5px;
+    }
+
+    .stock-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--cat-black);
+    }
+
+    .stock-value.available {
+        color: #059669;
+    }
+
+    /* Alert */
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .alert-warning {
+        background: rgba(217, 119, 6, 0.1);
+        color: #B45309;
+        border: 1px solid rgba(217, 119, 6, 0.2);
+    }
+
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: #DC2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    /* Meta Info */
+    .meta-info {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .meta-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+    }
+
+    .meta-label {
+        font-weight: 600;
+        color: var(--cat-gray-600);
+    }
+
+    .meta-value {
+        color: var(--cat-black);
+    }
+
+    /* Quick Actions */
+    .quick-actions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .quick-action-link {
+        background: none;
+        border: none;
+        padding: 10px 12px;
+        text-align: left;
+        font-size: 13px;
+        color: var(--cat-yellow);
+        cursor: pointer;
+        font-weight: 500;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .quick-action-link:hover {
+        background: var(--cat-gray-50);
+        color: var(--cat-black);
+    }
+
+    .quick-action-link.delete:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #DC2626;
+    }
+
+    /* Notes */
+    .notes-text {
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--cat-gray-700);
+        margin-bottom: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .detail-container {
+            padding: 15px;
+        }
+
+        .detail-title {
+            font-size: 18px;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stock-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<script>
+    // Add event listeners for action buttons
+    document.querySelectorAll('.quick-action-link').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const action = this.textContent.trim();
+            console.log('Action:', action);
+        });
+    });
+</script>
 {% endblock %}

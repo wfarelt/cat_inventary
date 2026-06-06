@@ -6,10 +6,26 @@ from django.urls import reverse
 class Category(TimeStampedModel):
     name = models.CharField(max_length=150, unique=True, db_index=True)
     description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         verbose_name = 'Categoría'
         verbose_name_plural = 'Categorías'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Brand(TimeStampedModel):
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Marca'
+        verbose_name_plural = 'Marcas'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -21,6 +37,7 @@ class Product(TimeStampedModel):
     cross_reference = models.TextField(blank=True)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL, related_name='products')
     brand = models.CharField(max_length=100, default='CATERPILLAR', db_index=True)
+    brand_ref = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.SET_NULL, related_name='products')
     cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     stock = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -42,6 +59,8 @@ class Product(TimeStampedModel):
     def save(self, *args, **kwargs):
         if self.code:
             self.code = self.code.upper()
+        if self.brand_ref and self.brand != self.brand_ref.name:
+            self.brand = self.brand_ref.name
         super().save(*args, **kwargs)
 
     @property
